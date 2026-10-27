@@ -18,7 +18,6 @@ export class EnrollStudentUseCase {
     this.policy = new EnrollmentPolicy(enrollments);
   }
 
-  /** 404 se aluno/curso não existirem; 409 se a matrícula já existir. */
   async execute(input: { studentId: number; courseId: number }): Promise<Enrollment> {
     if (!(await this.students.findById(input.studentId))) throw new StudentNotFoundError();
     if (!(await this.courses.findById(input.courseId))) throw new CourseNotFoundError();

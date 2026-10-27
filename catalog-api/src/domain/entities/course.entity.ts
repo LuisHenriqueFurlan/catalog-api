@@ -17,7 +17,6 @@ export class Course {
     public createdAt: Date | undefined,
   ) {}
 
-  /** Novo curso (ainda sem id); aplica as regras de criação. */
   static create(props: CourseProps): Course {
     Course.assertValidTitle(props.title);
     return new Course(
@@ -29,7 +28,6 @@ export class Course {
     );
   }
 
-  /** Reidrata um curso já persistido (sem revalidar). */
   static restore(data: {
     id: number;
     title: string;
@@ -40,7 +38,6 @@ export class Course {
     return new Course(data.id, data.title, data.category, data.description, data.createdAt);
   }
 
-  /** Substitui os campos editáveis (PUT). */
   update(props: CourseProps): void {
     Course.assertValidTitle(props.title);
     this.title = props.title.trim();

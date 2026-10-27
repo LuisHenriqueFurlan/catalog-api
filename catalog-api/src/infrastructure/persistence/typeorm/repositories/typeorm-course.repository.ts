@@ -15,13 +15,21 @@ export class TypeOrmCourseRepository implements ICourseRepository {
     @InjectRepository(CourseOrmEntity) private readonly repo: Repository<CourseOrmEntity>,
   ) {}
 
-  async findPage({ page, limit, category }: CourseFilter): Promise<Paginated<Course>> {
-    const [rows, total] = await this.repo.findAndCount({
-      where: category ? { category } : {},
-      order: { id: 'ASC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+  async findPage({ page, limit, category, search }: CourseFilter): Promise<Paginated<Course>> {
+    const qb = this.repo.createQueryBuilder('c');
+    if (category) qb.andWhere('c.category = :category', { category });
+    if (search) {
+      const term = `%${search.replace(/[\\%_]/g, '\\$&')}%`;
+      qb.andWhere(
+        "(c.title LIKE :term ESCAPE '\\' OR c.description LIKE :term ESCAPE '\\')",
+        { term },
+      );
+    }
+    const [rows, total] = await qb
+      .orderBy('c.id', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
     return { data: rows.map(toDomain), page, limit, total };
   }
 

@@ -1,6 +1,7 @@
 import {
   Column,
   CreateDateColumn,
+  Index,
   Entity,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -13,9 +14,11 @@ export class CourseOrmEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Index()
   @Column({ type: 'varchar' })
   title: string;
 
+  @Index()
   @Column({ type: 'varchar', nullable: true })
   category: string | null;
 

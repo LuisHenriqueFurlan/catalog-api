@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -20,6 +21,7 @@ export class EnrollmentOrmEntity {
   @Column({ type: 'integer' })
   studentId: number;
 
+  @Index()
   @Column({ type: 'integer' })
   courseId: number;
 

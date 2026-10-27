@@ -5,7 +5,6 @@ export abstract class IEnrollmentRepository {
   abstract findPage(query: PageQuery): Promise<Paginated<Enrollment>>;
   abstract findById(id: number): Promise<Enrollment | null>;
   abstract findByPair(studentId: number, courseId: number): Promise<Enrollment | null>;
-  /** Matrículas do estudante já com o curso carregado (um único JOIN). */
   abstract findByStudentWithCourse(studentId: number): Promise<Enrollment[]>;
   abstract save(enrollment: Enrollment): Promise<Enrollment>;
   abstract delete(id: number): Promise<void>;

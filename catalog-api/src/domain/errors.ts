@@ -1,4 +1,3 @@
-/** Erros de domínio: independentes de HTTP. A infraestrutura os traduz em status. */
 export abstract class DomainError extends Error {
   constructor(message: string) {
     super(message);

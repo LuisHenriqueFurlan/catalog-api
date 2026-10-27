@@ -3,7 +3,6 @@ import { Reflector } from '@nestjs/core';
 import { Role } from '../../domain/entities/user.entity.js';
 import { AuthenticatedRequest, ROLES_KEY } from './decorators.js';
 
-/** Aplica @Roles(...); sem o decorator, qualquer usuário autenticado passa. */
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}

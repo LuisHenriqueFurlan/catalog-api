@@ -16,10 +16,6 @@ import {
   ValidationError,
 } from '../../domain/errors.js';
 
-/**
- * Converte qualquer erro no formato padrão:
- * { message, path, timestamp, details? }
- */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -38,7 +34,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const res = exception.getResponse();
       const raw = typeof res === 'string' ? { message: res } : (res as Record<string, unknown>);
       if (Array.isArray(raw.message)) {
-        // erros do ValidationPipe
         message = 'Erro de validação';
         details = raw.message;
       } else {
@@ -68,7 +63,6 @@ function isUniqueViolation(error: unknown): boolean {
   return code === 'SQLITE_CONSTRAINT_UNIQUE' || code === '23505';
 }
 
-/** Traduz erros de domínio em status HTTP (o domínio não conhece HTTP). */
 function domainErrorStatus(error: DomainError): HttpStatus {
   if (error instanceof NotFoundError) return HttpStatus.NOT_FOUND;
   if (error instanceof ConflictError) return HttpStatus.CONFLICT;

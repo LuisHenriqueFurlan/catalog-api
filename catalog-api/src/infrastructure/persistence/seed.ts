@@ -22,7 +22,6 @@ if ((await students.count()) === 0) {
   ]);
 }
 
-// Admin inicial (credenciais via ADMIN_EMAIL / ADMIN_PASSWORD; troque em produção).
 const users = dataSource.getRepository(UserOrmEntity);
 const adminEmail = (process.env.ADMIN_EMAIL ?? 'admin@example.com').toLowerCase();
 if (!(await users.findOneBy({ email: adminEmail }))) {

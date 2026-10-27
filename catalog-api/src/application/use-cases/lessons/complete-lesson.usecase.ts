@@ -20,7 +20,6 @@ export class CompleteLessonUseCase {
     this.policy = new LessonProgressPolicy(enrollments);
   }
 
-  /** Idempotente: concluir de novo devolve o registro sem alterar completedAt. */
   async execute(input: { studentId: number; lessonId: number }): Promise<LessonProgress> {
     if (!(await this.students.findById(input.studentId))) throw new StudentNotFoundError();
     const lesson = await this.lessons.findById(input.lessonId);

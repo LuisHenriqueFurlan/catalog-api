@@ -30,7 +30,6 @@ import { AuthController } from '../controllers/auth.controller.js';
     LoginUseCase,
     { provide: IPasswordHasher, useClass: BcryptPasswordHasher },
     { provide: ITokenService, useClass: JwtTokenService },
-    // Guards globais: tudo exige JWT, salvo rotas @Public(); depois aplica @Roles().
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],

@@ -15,7 +15,6 @@ export interface CourseProgress {
   courseId: number;
   totalLessons: number;
   completedLessons: number;
-  /** 0–100, arredondado; curso sem aulas = 0. */
   percentage: number;
 }
 

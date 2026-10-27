@@ -33,7 +33,6 @@ export class LessonProgress {
     return this.status === 'completed';
   }
 
-  /** Marca a aula como concluída; repetir a chamada preserva o completedAt original. */
   complete(now: Date = new Date()): void {
     if (this.isCompleted) return;
     this.status = 'completed';

@@ -1,6 +1,5 @@
 import { ValidationError } from '../errors.js';
 
-/** E-mail normalizado (minúsculas, sem espaços) e validado. */
 export class Email {
   private static readonly PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

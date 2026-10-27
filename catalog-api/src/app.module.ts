@@ -8,6 +8,7 @@ import { AuthModule } from './presentation/modules/auth.module.js';
 import { CoursesModule } from './presentation/modules/courses.module.js';
 import { EnrollmentsModule } from './presentation/modules/enrollments.module.js';
 import { LessonsModule } from './presentation/modules/lessons.module.js';
+import { ReportsModule } from './presentation/modules/reports.module.js';
 import { StudentsModule } from './presentation/modules/students.module.js';
 
 @Module({
@@ -30,6 +31,7 @@ import { StudentsModule } from './presentation/modules/students.module.js';
     CoursesModule,
     StudentsModule,
     LessonsModule,
+    ReportsModule,
     EnrollmentsModule,
   ],
   controllers: [HealthController],

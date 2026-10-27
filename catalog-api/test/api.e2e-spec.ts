@@ -121,3 +121,54 @@ describe('API (e2e)', () => {
     });
   });
 });
+
+describe('Consultas avançadas e relatórios (e2e)', () => {
+  let app: INestApplication;
+  let token: string;
+  const http = () => client(app, token);
+
+  beforeAll(async () => {
+    app = await createTestApp();
+    token = (await signUp(app, 'admin@example.com', 'ADMIN')).token;
+    const courses = [
+      { title: 'Node.js avançado', category: 'Backend', description: 'Streams e eventos' },
+      { title: 'NestJS na prática', category: 'Backend' },
+      { title: 'SQL essencial', category: 'Dados', description: '100% prático' },
+    ];
+    for (const course of courses) await http().post('/api/courses').send(course).expect(201);
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('search no título ou na descrição, combinável com category', async () => {
+    const byTitle = await http().get('/api/courses?search=nest').expect(200);
+    expect(byTitle.body.data.map((c: { title: string }) => c.title)).toEqual(['NestJS na prática']);
+    const byDescription = await http().get('/api/courses?search=streams').expect(200);
+    expect(byDescription.body.total).toBe(1);
+    const combined = await http().get('/api/courses?category=Backend&search=node').expect(200);
+    expect(combined.body.total).toBe(1);
+  });
+
+  it('curingas do LIKE e tentativa de SQL injection são tratados como texto', async () => {
+    const percent = await http().get('/api/courses?search=100%25').expect(200);
+    expect(percent.body.total).toBe(1);
+    const all = await http().get('/api/courses?search=%25').expect(200);
+    expect(all.body.total).toBe(1);
+    const injection = await http()
+      .get(`/api/courses?search=${encodeURIComponent("x' OR '1'='1")}`)
+      .expect(200);
+    expect(injection.body.total).toBe(0);
+  });
+
+  it('relatório de matrículas por curso (inclui cursos com 0)', async () => {
+    const student = await signUp(app, 'aluno@example.com');
+    await http().post('/api/enrollments').send({ studentId: student.studentId, courseId: 1 }).expect(201);
+    const res = await http().get('/api/reports/courses/enrollments').expect(200);
+    expect(res.body).toHaveLength(3);
+    expect(res.body[0]).toMatchObject({ courseId: 1, title: 'Node.js avançado', enrollments: 1 });
+    expect(res.body.slice(1).every((r: { enrollments: number }) => r.enrollments === 0)).toBe(true);
+    await client(app, student.token).get('/api/reports/courses/enrollments').expect(403);
+  });
+});

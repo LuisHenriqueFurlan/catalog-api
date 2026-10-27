@@ -9,7 +9,6 @@ export class User {
     public readonly email: Email,
     public readonly passwordHash: string,
     public role: Role,
-    /** Estudante vinculado (perfil de aluno), quando existir. */
     public readonly studentId: number | null,
     public createdAt: Date | undefined,
   ) {}
@@ -49,7 +48,6 @@ export class User {
     );
   }
 
-  /** Nunca expõe o hash da senha na resposta JSON. */
   toJSON() {
     return {
       id: this.id,

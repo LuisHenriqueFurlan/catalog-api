@@ -2,7 +2,6 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './all-exceptions.filter.js';
 
-/** Configuração compartilhada entre a aplicação e os testes e2e. */
 export function configureApp(app: INestApplication) {
   app.enableCors();
   app.setGlobalPrefix('api', { exclude: ['health'] });

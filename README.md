@@ -178,7 +178,7 @@ registrar como ADMIN pela API.
 | Método | Rota                          | Descrição                                   | Sucesso |
 | ------ | ----------------------------- | ------------------------------------------- | ------- |
 | POST   | `/courses`                    | Cria curso                                  | 201     |
-| GET    | `/courses?category=&page=&limit=` | Lista (filtro e paginação)              | 200     |
+| GET    | `/courses?category=&search=&page=&limit=` | Lista (filtros e paginação)     | 200     |
 | GET    | `/courses/:id`                | Busca curso                                 | 200     |
 | PUT    | `/courses/:id`                | Atualiza curso                              | 200     |
 | DELETE | `/courses/:id`                | Remove curso                                | 204     |
@@ -191,6 +191,7 @@ registrar como ADMIN pela API.
 | GET    | `/enrollments?page=&limit=`   | Lista matrículas                            | 200     |
 | GET    | `/enrollments/:id`            | Busca matrícula                             | 200     |
 | DELETE | `/enrollments/:id`            | Cancela matrícula                           | 204     |
+| GET    | `/reports/courses/enrollments` | Matrículas por curso (ADMIN)               | 200     |
 | GET    | `/students/:id/enrollments`   | Matrículas (com curso) do estudante         | 200     |
 | GET    | `/courses/:id/lessons`        | Aulas do curso, por ordem                   | 200     |
 | POST   | `/courses/:id/lessons`        | Cria aula (`title`, `order`, `contentUrl`)  | 201     |
@@ -199,6 +200,42 @@ registrar como ADMIN pela API.
 
 Listagens retornam `{ "data": [...], "page": 1, "limit": 10, "total": 3 }`
 (`limit` máx. 100). `GET /health` fica fora do prefixo.
+
+## Consultas avançadas, relatórios e performance
+
+`GET /api/courses` aceita (todos opcionais e combináveis):
+
+| Parâmetro  | Descrição                                                        |
+| ---------- | ---------------------------------------------------------------- |
+| `category` | Categoria exata                                                  |
+| `search`   | Texto contido no título ou na descrição (sem diferenciar maiúsculas; `%` e `_` são tratados como texto) |
+| `page`     | Página, a partir de 1 (padrão 1)                                 |
+| `limit`    | Itens por página, 1–100 (padrão 10)                              |
+
+Resposta: `{ "data": [...], "page": 1, "limit": 10, "total": 42 }`.
+Não há campo de nível no modelo, então não existe filtro por nível.
+
+`GET /api/reports/courses/enrollments` (ADMIN) devolve `[{ courseId, title, enrollments }]`
+ordenado por matrículas, incluindo cursos com 0, em **uma única query** (`LEFT JOIN` + `GROUP BY`).
+
+**Índices** (migration `Indexes`): `courses.title`, `courses.category`,
+`enrollments.courseId` e `lesson_progress.lessonId`. `students.email` e `users.email` já
+têm índice pela constraint `UNIQUE`. As unicidades `(studentId, courseId)`,
+`(courseId, order)` e `(studentId, lessonId)` também são indexadas.
+
+**Sem N+1:** `GET /students/:id/enrollments` carrega matrículas e cursos em um `JOIN`;
+o progresso do curso usa `COUNT` com `JOIN` (sem carregar linhas); a listagem de cursos
+faz `COUNT` + página em uma só chamada.
+
+Medição manual (SQLite, 100 mil cursos e 200 mil matrículas, média de 200 execuções):
+
+| Consulta                                   | Sem índice | Com índice |
+| ------------------------------------------ | ---------- | ---------- |
+| cursos por `category` (`LIMIT 10`)         | 0,139 ms   | 0,008 ms   |
+| matrículas de um curso (`COUNT` por `courseId`) | 5,257 ms | 0,001 ms   |
+
+O `search` usa `LIKE '%termo%'`, que não aproveita índice de B-tree; para catálogos muito
+grandes, o próximo passo seria busca full-text (FTS5 no SQLite ou `pg_trgm` no PostgreSQL).
 
 ## Exemplos (curl)
 

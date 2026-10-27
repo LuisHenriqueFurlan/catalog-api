@@ -4,6 +4,7 @@ import { ICourseRepository } from '../../domain/repositories/course.repository.j
 import { IEnrollmentRepository } from '../../domain/repositories/enrollment.repository.js';
 import { ILessonProgressRepository } from '../../domain/repositories/lesson-progress.repository.js';
 import { ILessonRepository } from '../../domain/repositories/lesson.repository.js';
+import { IReportRepository } from '../../domain/repositories/report.repository.js';
 import { IUserRepository } from '../../domain/repositories/user.repository.js';
 import { IStudentRepository } from '../../domain/repositories/student.repository.js';
 import { ormEntities } from './typeorm/entities/index.js';
@@ -11,16 +12,17 @@ import { TypeOrmCourseRepository } from './typeorm/repositories/typeorm-course.r
 import { TypeOrmEnrollmentRepository } from './typeorm/repositories/typeorm-enrollment.repository.js';
 import { TypeOrmLessonProgressRepository } from './typeorm/repositories/typeorm-lesson-progress.repository.js';
 import { TypeOrmLessonRepository } from './typeorm/repositories/typeorm-lesson.repository.js';
+import { TypeOrmReportRepository } from './typeorm/repositories/typeorm-report.repository.js';
 import { TypeOrmUserRepository } from './typeorm/repositories/typeorm-user.repository.js';
 import { TypeOrmStudentRepository } from './typeorm/repositories/typeorm-student.repository.js';
 
-/** Liga as portas do domínio às implementações TypeORM. */
 @Module({
   imports: [TypeOrmModule.forFeature(ormEntities)],
   providers: [
     { provide: ICourseRepository, useClass: TypeOrmCourseRepository },
     { provide: IStudentRepository, useClass: TypeOrmStudentRepository },
     { provide: IEnrollmentRepository, useClass: TypeOrmEnrollmentRepository },
+    { provide: IReportRepository, useClass: TypeOrmReportRepository },
     { provide: IUserRepository, useClass: TypeOrmUserRepository },
     { provide: ILessonRepository, useClass: TypeOrmLessonRepository },
     { provide: ILessonProgressRepository, useClass: TypeOrmLessonProgressRepository },
@@ -32,6 +34,7 @@ import { TypeOrmStudentRepository } from './typeorm/repositories/typeorm-student
     ILessonRepository,
     ILessonProgressRepository,
     IUserRepository,
+    IReportRepository,
   ],
 })
 export class PersistenceModule {}

@@ -26,7 +26,6 @@ export class RegisterUserUseCase {
     this.emailPolicy = new StudentEmailPolicy(students);
   }
 
-  /** Cria o usuário (role padrão STUDENT) e o perfil de estudante vinculado. */
   async execute(input: RegisterUserInput): Promise<User> {
     if (input.password.length < 8) {
       throw new ValidationError('A senha deve ter ao menos 8 caracteres');

@@ -6,7 +6,6 @@ import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/infrastructure/http/app.config.js';
 import { UserOrmEntity } from '../src/infrastructure/persistence/typeorm/entities/index.js';
 
-/** App completo sobre SQLite em memória; as migrations rodam no boot. */
 export async function createTestApp(): Promise<INestApplication> {
   process.env.DATABASE_URL = ':memory:';
   process.env.JWT_SECRET = 'segredo-de-teste';
@@ -19,7 +18,6 @@ export async function createTestApp(): Promise<INestApplication> {
   return app;
 }
 
-/** Cliente HTTP que envia o Bearer token (quando informado). */
 export function client(app: INestApplication, token?: string) {
   const server = app.getHttpServer();
   const auth = <T extends request.Test>(req: T) =>
@@ -34,7 +32,6 @@ export function client(app: INestApplication, token?: string) {
 
 export const PASSWORD = 'senha-forte-123';
 
-/** Registra um usuário e devolve token + ids. Com role ADMIN, promove direto no banco. */
 export async function signUp(
   app: INestApplication,
   email: string,

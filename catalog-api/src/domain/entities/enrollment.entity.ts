@@ -6,7 +6,6 @@ export class Enrollment {
     public readonly studentId: number,
     public readonly courseId: number,
     public createdAt: Date | undefined,
-    /** Preenchido apenas em consultas que já trazem o curso. */
     public course?: Course,
   ) {}
 

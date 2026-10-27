@@ -13,7 +13,6 @@ export class LoginUseCase {
     private readonly tokens: ITokenService,
   ) {}
 
-  /** Mesma resposta para e-mail inexistente e senha errada (não revela qual). */
   async execute(input: { email: string; password: string }): Promise<{ accessToken: string }> {
     let email: Email;
     try {

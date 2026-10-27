@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -19,6 +20,7 @@ export class LessonProgressOrmEntity {
   @Column({ type: 'integer' })
   studentId: number;
 
+  @Index()
   @Column({ type: 'integer' })
   lessonId: number;
 

@@ -8,7 +8,6 @@ import { Reflector } from '@nestjs/core';
 import { ITokenService } from '../../application/ports/token-service.js';
 import { AuthenticatedRequest, IS_PUBLIC_KEY } from './decorators.js';
 
-/** Exige `Authorization: Bearer <token>` válido, exceto em rotas @Public(). */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(

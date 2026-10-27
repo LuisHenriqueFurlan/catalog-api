@@ -35,7 +35,6 @@ export class Student {
     }
   }
 
-  /** Mantém o e-mail como string na resposta JSON. */
   toJSON() {
     return {
       id: this.id,
