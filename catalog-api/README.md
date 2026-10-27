@@ -152,3 +152,16 @@ curl -X POST http://localhost:3000/api/enrollments   -H "Content-Type: applicati
 # cursos do estudante
 curl http://localhost:3000/api/students/1/enrollments
 ```
+
+## Docker
+
+```bash
+docker compose up --build   # API em http://localhost:3000 (Swagger em /docs)
+```
+
+O banco SQLite fica no volume `db-data` (`/app/data/catalog.db`) e as migrations
+rodam sozinhas ao subir. Para popular dados de exemplo sem Docker: `npm run seed`.
+
+## Licença
+
+MIT — veja [LICENSE](../LICENSE).

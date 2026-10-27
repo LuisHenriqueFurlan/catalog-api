@@ -1,0 +1,14 @@
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DATABASE_URL: file:/app/data/catalog.db
+    volumes:
+      # o banco SQLite persiste neste volume (migrations rodam no boot)
+      - db-data:/app/data
+
+volumes:
+  db-data:
