@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { IAuditLog } from '../../application/ports/audit-log.js';
 import { AuditLogEntry } from '../../domain/entities/audit-log.entity.js';
 import { Paginated } from '../../domain/pagination.js';
 import {
@@ -11,7 +10,7 @@ import {
 import { AuditLogDocument } from './audit-log.schema.js';
 
 @Injectable()
-export class AuditLogService implements IAuditLog, IAuditLogRepository {
+export class AuditLogService implements IAuditLogRepository {
   private readonly logger = new Logger(AuditLogService.name);
 
   constructor(
@@ -36,6 +35,14 @@ export class AuditLogService implements IAuditLog, IAuditLogRepository {
   }
 
   async append(entry: AuditLogEntry): Promise<void> {
+    if (entry.eventId) {
+      await this.model.updateOne(
+        { eventId: entry.eventId },
+        { $setOnInsert: entry },
+        { upsert: true },
+      );
+      return;
+    }
     await this.model.create(entry);
   }
 

@@ -3,6 +3,9 @@ import { HydratedDocument } from 'mongoose';
 
 @Schema({ collection: 'audit_logs', versionKey: false })
 export class AuditLogDocument {
+  @Prop({ type: String, required: false })
+  eventId?: string;
+
   @Prop({ required: true, index: true })
   event: string;
 
@@ -19,3 +22,4 @@ export class AuditLogDocument {
 export type AuditLogHydrated = HydratedDocument<AuditLogDocument>;
 export const AuditLogSchema = SchemaFactory.createForClass(AuditLogDocument);
 AuditLogSchema.index({ 'payload.studentId': 1, timestamp: -1 });
+AuditLogSchema.index({ eventId: 1 }, { unique: true, partialFilterExpression: { eventId: { $type: 'string' } } });

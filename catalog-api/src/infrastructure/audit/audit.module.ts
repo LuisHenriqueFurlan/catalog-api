@@ -1,7 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { IAuditLog } from '../../application/ports/audit-log.js';
 import { IAuditLogRepository } from '../../domain/repositories/audit-log.repository.js';
 import { AuditLogService } from './audit-log.service.js';
 import { AuditLogDocument, AuditLogSchema } from './audit-log.schema.js';
@@ -20,9 +19,8 @@ import { AuditLogDocument, AuditLogSchema } from './audit-log.schema.js';
   ],
   providers: [
     AuditLogService,
-    { provide: IAuditLog, useExisting: AuditLogService },
     { provide: IAuditLogRepository, useExisting: AuditLogService },
   ],
-  exports: [IAuditLog, IAuditLogRepository],
+  exports: [AuditLogService, IAuditLogRepository],
 })
 export class AuditModule {}

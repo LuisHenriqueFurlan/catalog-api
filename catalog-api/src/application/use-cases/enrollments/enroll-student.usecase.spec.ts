@@ -9,7 +9,7 @@ import {
 import { ICourseRepository } from '../../../domain/repositories/course.repository.js';
 import { IEnrollmentRepository } from '../../../domain/repositories/enrollment.repository.js';
 import { IStudentRepository } from '../../../domain/repositories/student.repository.js';
-import { IAuditLog } from '../../ports/audit-log.js';
+import { IEventPublisher } from '../../ports/event-publisher.js';
 import { EnrollStudentUseCase } from './enroll-student.usecase.js';
 
 describe('EnrollStudentUseCase', () => {
@@ -34,10 +34,10 @@ describe('EnrollStudentUseCase', () => {
   } as unknown as IEnrollmentRepository;
   const events: string[] = [];
   const audit = {
-    record: async (event: string) => {
-      events.push(event);
+    publish: async (message: { event: string }) => {
+      events.push(message.event);
     },
-  } as unknown as IAuditLog;
+  } as unknown as IEventPublisher;
   const useCase = new EnrollStudentUseCase(enrollments, students, courses, audit);
 
   it('matricula e depois rejeita duplicidade', async () => {

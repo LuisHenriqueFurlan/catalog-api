@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { IAuditLog } from '../../ports/audit-log.js';
+import { IEventPublisher } from '../../ports/event-publisher.js';
 import { AUDIT_EVENTS } from '../../../domain/entities/audit-log.entity.js';
 import { Enrollment } from '../../../domain/entities/enrollment.entity.js';
 import { CourseNotFoundError, StudentNotFoundError } from '../../../domain/errors.js';
@@ -16,7 +16,7 @@ export class EnrollStudentUseCase {
     private readonly enrollments: IEnrollmentRepository,
     private readonly students: IStudentRepository,
     private readonly courses: ICourseRepository,
-    private readonly audit: IAuditLog,
+    private readonly events: IEventPublisher,
   ) {
     this.policy = new EnrollmentPolicy(enrollments);
   }
@@ -32,10 +32,14 @@ export class EnrollStudentUseCase {
     const enrollment = await this.enrollments.save(
       Enrollment.create(input.studentId, input.courseId),
     );
-    await this.audit.record(AUDIT_EVENTS.STUDENT_ENROLLED, input.actorId ?? null, {
-      studentId: String(input.studentId),
-      courseId: String(input.courseId),
-      enrollmentId: String(enrollment.id),
+    await this.events.publish({
+      event: AUDIT_EVENTS.STUDENT_ENROLLED,
+      actorId: input.actorId ?? null,
+      payload: {
+        studentId: String(input.studentId),
+        courseId: String(input.courseId),
+        enrollmentId: String(enrollment.id),
+      },
     });
     return enrollment;
   }

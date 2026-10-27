@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { IAuditLog } from '../../ports/audit-log.js';
+import { IEventPublisher } from '../../ports/event-publisher.js';
 import { AUDIT_EVENTS } from '../../../domain/entities/audit-log.entity.js';
 import { LessonProgress } from '../../../domain/entities/lesson-progress.entity.js';
 import { LessonNotFoundError, StudentNotFoundError } from '../../../domain/errors.js';
@@ -18,7 +18,7 @@ export class CompleteLessonUseCase {
     private readonly progress: ILessonProgressRepository,
     private readonly students: IStudentRepository,
     enrollments: IEnrollmentRepository,
-    private readonly audit: IAuditLog,
+    private readonly events: IEventPublisher,
   ) {
     this.policy = new LessonProgressPolicy(enrollments);
   }
@@ -40,10 +40,14 @@ export class CompleteLessonUseCase {
     progress.complete();
     const saved = await this.progress.save(progress);
     if (!alreadyCompleted) {
-      await this.audit.record(AUDIT_EVENTS.LESSON_COMPLETED, input.actorId ?? null, {
-        studentId: String(input.studentId),
-        lessonId: String(input.lessonId),
-        courseId: String(lesson.courseId),
+      await this.events.publish({
+        event: AUDIT_EVENTS.LESSON_COMPLETED,
+        actorId: input.actorId ?? null,
+        payload: {
+          studentId: String(input.studentId),
+          lessonId: String(input.lessonId),
+          courseId: String(lesson.courseId),
+        },
       });
     }
     return saved;

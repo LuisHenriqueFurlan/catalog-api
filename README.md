@@ -123,6 +123,44 @@ Eventos importantes ficam na coleção `audit_logs` do MongoDB, separada do banc
   igualdade literal (`$eq`), o que bloqueia injeção de operadores.
 - Os testes usam `mongodb-memory-server` (o binário é baixado na primeira execução).
 
+## Mensageria (RabbitMQ) e worker
+
+Com `RABBITMQ_URL` definida, a API **publica** os eventos no RabbitMQ em vez de gravar a
+auditoria diretamente, e um **worker** separado consome a fila e persiste em `audit_logs`:
+
+```
+API (use cases) ──publish──▶ exchange "catalog.events" (topic)
+                                   │ binding "#"
+                                   ▼
+                            fila "audit.events" (durável) ──▶ worker ──▶ MongoDB audit_logs
+                                   │ (falha ao processar)
+                                   ▼
+                            "audit.events.dlq" (dead-letter)
+```
+
+```bash
+docker run -d --name catalog-rabbit -p 5672:5672 -p 15672:15672 rabbitmq:3.13-management
+# no .env: RABBITMQ_URL=amqp://guest:guest@localhost:5672
+npm run start:dev      # API
+npm run start:worker   # worker (em outro terminal); em produção: npm run start:worker:prod
+```
+
+Painel do RabbitMQ: http://localhost:15672 (guest/guest). Sem `RABBITMQ_URL`, a API grava a
+auditoria diretamente no Mongo (modo "inline", útil em desenvolvimento e nos testes).
+
+Resiliência:
+
+- Fila e exchange **duráveis**, mensagens **persistentes** e publicação com *publisher confirms*.
+  A API cria a topologia ao publicar, então os eventos ficam enfileirados mesmo sem
+  consumer: **se o worker estiver offline, as mensagens pendentes são processadas assim que ele voltar**.
+- O worker usa *ack* manual com `prefetch`, reconecta sozinho se o RabbitMQ cair e registra
+  `Evento processado: <evento> (<eventId>)` a cada mensagem.
+- Cada evento tem um `eventId` (UUID) com índice único no Mongo: a reentrega de uma mensagem
+  não gera registro duplicado (entrega *at-least-once* + gravação idempotente).
+- Mensagem que não pode ser processada vai para a DLQ (`audit.events.dlq`) em vez de travar a fila.
+- Se o RabbitMQ estiver fora ao publicar, o erro é logado e a requisição continua (best-effort);
+  um *outbox* transacional seria o próximo passo para garantia total.
+
 ## Erros
 
 Todo erro tem o mesmo formato (`AllExceptionsFilter`):

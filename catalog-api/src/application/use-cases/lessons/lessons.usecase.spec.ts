@@ -9,7 +9,7 @@ import { IEnrollmentRepository } from '../../../domain/repositories/enrollment.r
 import { ILessonProgressRepository } from '../../../domain/repositories/lesson-progress.repository.js';
 import { ILessonRepository } from '../../../domain/repositories/lesson.repository.js';
 import { IStudentRepository } from '../../../domain/repositories/student.repository.js';
-import { IAuditLog } from '../../ports/audit-log.js';
+import { IEventPublisher } from '../../ports/event-publisher.js';
 import { CompleteLessonUseCase } from './complete-lesson.usecase.js';
 import { GetStudentCourseProgressUseCase } from './get-student-course-progress.usecase.js';
 
@@ -44,10 +44,10 @@ function setup(enrolled: boolean) {
   } as unknown as IEnrollmentRepository;
   const events: string[] = [];
   const audit = {
-    record: async (event: string) => {
-      events.push(event);
+    publish: async (message: { event: string }) => {
+      events.push(message.event);
     },
-  } as unknown as IAuditLog;
+  } as unknown as IEventPublisher;
   return {
     events,
     complete: new CompleteLessonUseCase(lessons, progress, students, enrollments, audit),
