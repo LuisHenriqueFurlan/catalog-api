@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller.js';
-import { entities } from './database/data-source.js';
-import { migrations } from './database/migrations/index.js';
-import { CoursesModule } from './courses/courses.module.js';
-import { StudentsModule } from './students/students.module.js';
-import { EnrollmentsModule } from './enrollments/enrollments.module.js';
+import { migrations } from './infrastructure/persistence/migrations/index.js';
+import { ormEntities } from './infrastructure/persistence/typeorm/entities/index.js';
+import { HealthController } from './presentation/controllers/health.controller.js';
+import { CoursesModule } from './presentation/modules/courses.module.js';
+import { EnrollmentsModule } from './presentation/modules/enrollments.module.js';
+import { StudentsModule } from './presentation/modules/students.module.js';
 
 @Module({
   imports: [
@@ -18,7 +18,7 @@ import { EnrollmentsModule } from './enrollments/enrollments.module.js';
         database: config
           .get<string>('DATABASE_URL', 'file:./data/catalog.db')
           .replace(/^file:/, ''),
-        entities,
+        entities: ormEntities,
         migrations,
         migrationsRun: true,
         synchronize: false,
@@ -28,6 +28,6 @@ import { EnrollmentsModule } from './enrollments/enrollments.module.js';
     StudentsModule,
     EnrollmentsModule,
   ],
-  controllers: [AppController],
+  controllers: [HealthController],
 })
 export class AppModule {}

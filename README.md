@@ -30,53 +30,63 @@ Verifique: `curl http://localhost:3000/health` → `{"status":"ok"}`
 | `npm test`           | Todos os testes (unitário + e2e) |
 | `npm run test:e2e`   | Apenas e2e (supertest)       |
 
-## Estrutura
-
-```
-catalog-api/src/
-├── main.ts            # bootstrap + CORS
-├── app.module.ts      # módulo raiz
-└── app.controller.ts  # GET /health
-```
-
 ## Banco de dados
 
 - ORM: TypeORM + SQLite (`better-sqlite3`), configurado por `DATABASE_URL` (ex.: `file:./data/catalog.db`).
 - Entidades: `Course`, `Student` (email único), `Enrollment` (`studentId` + `courseId` únicos).
-- Migrations em `src/database/migrations`.
+- Migrations em `src/infrastructure/persistence/migrations`.
 
 | Script                                        | Descrição                       |
 | --------------------------------------------- | ------------------------------- |
 | `npm run migration:run`                       | Aplica as migrations            |
-| `npm run migration:generate -- src/database/migrations/Nome` | Gera migration a partir das entidades |
+| `npm run migration:generate -- src/infrastructure/persistence/migrations/Nome` | Gera migration a partir das entidades |
 | `npm run migration:revert`                    | Desfaz a última migration       |
 | `npm run seed`                                | Popula dados iniciais (idempotente) |
 
-## Arquitetura em camadas
+## Arquitetura (Clean Architecture + DDD)
 
-Cada domínio é um módulo Nest com as camadas abaixo:
-
-```
-Controller  →  Service  →  Repository  →  TypeORM (entidade)
- (HTTP/DTO)   (regras)     (acesso a dados)
-```
+As dependências apontam sempre para dentro: `presentation → application → domain`,
+e `infrastructure` implementa as portas definidas pelo domínio.
 
 ```
 catalog-api/src/
-├── main.ts / app.config.ts   # bootstrap, prefixo /api, ValidationPipe e filtro globais
-├── app.module.ts             # módulo raiz (ConfigModule, TypeOrmModule)
-├── common/filters/           # AllExceptionsFilter (formato único de erro)
-├── courses/                  # CoursesModule: controller, service, repository, dto, entity
-├── students/                 # StudentsModule
-├── enrollments/              # EnrollmentsModule (usa Courses e Students)
-└── database/                 # data-source (CLI), migrations, seed
+├── domain/                  # regras de negócio puras (sem Nest, sem ORM)
+│   ├── entities/            # Course, Student, Enrollment (validam a si mesmas)
+│   ├── value-objects/       # Email
+│   ├── repositories/        # portas: ICourseRepository, IStudentRepository, IEnrollmentRepository
+│   ├── services/            # EnrollmentPolicy (matrícula duplicada), StudentEmailPolicy
+│   └── errors.ts            # NotFound / Conflict / Validation (sem conhecer HTTP)
+├── application/
+│   └── use-cases/           # um caso de uso por ação (create-course, enroll-student, ...)
+├── infrastructure/
+│   ├── persistence/         # TypeORM: entidades ORM, repositórios, migrations, seed
+│   ├── http/                # app.config (prefixo, pipes, Swagger) e filtro global de erros
+│   ├── messaging/           # (próximas tarefas)
+│   └── auth/                # (próximas tarefas)
+├── presentation/
+│   ├── controllers/         # só HTTP: recebem DTO, chamam o use case
+│   ├── dtos/                # validação (class-validator) e Swagger
+│   └── modules/             # módulos Nest que ligam controllers + use cases
+├── app.module.ts            # composition root
+└── main.ts
 ```
 
-Configuração global (`src/app.config.ts`):
+Fluxo de uma requisição:
 
-- Prefixo `/api` (exceto `/health`).
-- `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })`.
-- `AllExceptionsFilter`: todo erro sai como `{ message, details?, path, timestamp }`.
+```
+HTTP → Controller (DTO validado) → UseCase → Entidade/Policy de domínio
+                                        └→ ICourseRepository (porta)
+                                              ↑ implementada por TypeOrmCourseRepository
+```
+
+- **Regras no domínio:** título do curso ≥ 3 caracteres (`Course`), e-mail válido
+  (`Email`), matrícula única por estudante+curso (`EnrollmentPolicy`), e-mail único
+  (`StudentEmailPolicy`).
+- **Repositórios por abstração:** os use cases recebem `ICourseRepository` etc. por
+  injeção de dependência; o `PersistenceModule` liga cada porta à implementação TypeORM.
+  Trocar o banco não toca em domínio nem em casos de uso.
+- **Erros:** o domínio lança `NotFoundError`/`ConflictError`/`ValidationError`; o
+  `AllExceptionsFilter` os traduz em 404/409/400.
 
 ## Erros
 
@@ -112,7 +122,7 @@ npm test
 Os testes e2e (`test/`) sobem o app completo com `@nestjs/testing` + supertest sobre
 **SQLite em memória** (`DATABASE_URL=:memory:`); as migrations rodam no boot do app
 (`migrationsRun`). Novas migrations devem ser registradas em
-`src/database/migrations/index.ts`.
+`src/infrastructure/persistence/migrations/index.ts`.
 
 ## Endpoints (prefixo `/api`)
 

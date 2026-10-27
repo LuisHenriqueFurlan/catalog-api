@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../src/app.module.js';
-import { configureApp } from '../src/app.config.js';
+import { configureApp } from '../src/infrastructure/http/app.config.js';
 
 /** App completo sobre SQLite em memória; as migrations rodam no boot. */
 export async function createTestApp(): Promise<INestApplication> {
