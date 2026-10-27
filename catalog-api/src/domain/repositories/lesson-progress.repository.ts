@@ -5,6 +5,6 @@ export abstract class ILessonProgressRepository {
     studentId: number,
     lessonId: number,
   ): Promise<LessonProgress | null>;
-  abstract countCompletedInCourse(studentId: number, courseId: number): Promise<number>;
+  abstract findCompletedLessonIds(studentId: number, courseId: number): Promise<number[]>;
   abstract save(progress: LessonProgress): Promise<LessonProgress>;
 }

@@ -15,6 +15,7 @@ export interface CourseProgress {
   courseId: number;
   totalLessons: number;
   completedLessons: number;
+  completedLessonIds: number[];
   percentage: number;
 }
 
@@ -35,11 +36,12 @@ export class GetStudentCourseProgressUseCase {
       throw new NotEnrolledError();
     }
     const totalLessons = await this.lessons.countByCourse(input.courseId);
-    const completedLessons = await this.progress.countCompletedInCourse(
+    const completedLessonIds = await this.progress.findCompletedLessonIds(
       input.studentId,
       input.courseId,
     );
+    const completedLessons = completedLessonIds.length;
     const percentage = totalLessons === 0 ? 0 : Math.round((completedLessons / totalLessons) * 100);
-    return { ...input, totalLessons, completedLessons, percentage };
+    return { ...input, totalLessons, completedLessons, completedLessonIds, percentage };
   }
 }

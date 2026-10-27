@@ -55,7 +55,12 @@ describe('Lessons (e2e)', () => {
     expect(again.body.completedAt).toBe(first.body.completedAt);
 
     const res = await student().get(`/api/students/${studentId}/courses/${courseId}/progress`).expect(200);
-    expect(res.body).toMatchObject({ totalLessons: 2, completedLessons: 1, percentage: 50 });
+    expect(res.body).toMatchObject({
+      totalLessons: 2,
+      completedLessons: 1,
+      completedLessonIds: [lessonIds[0]],
+      percentage: 50,
+    });
   });
 
   it('aula inexistente -> 404', async () => {

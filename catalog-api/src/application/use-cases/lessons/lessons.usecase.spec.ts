@@ -27,7 +27,7 @@ function setup(enrolled: boolean) {
   const progress = {
     findByStudentAndLesson: async (s: number, l: number) =>
       store.find((p) => p.studentId === s && p.lessonId === l) ?? null,
-    countCompletedInCourse: async () => store.filter((p) => p.isCompleted).length,
+    findCompletedLessonIds: async () => store.filter((p) => p.isCompleted).map((p) => p.lessonId),
     save: async (p: LessonProgress) => {
       if (!store.includes(p)) store.push(p);
       return p;
@@ -87,6 +87,7 @@ describe('GetStudentCourseProgressUseCase', () => {
       courseId: 1,
       totalLessons: 4,
       completedLessons: 2,
+      completedLessonIds: [1, 2],
       percentage: 50,
     });
   });

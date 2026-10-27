@@ -20,14 +20,17 @@ export class TypeOrmLessonProgressRepository implements ILessonProgressRepositor
     return row ? toDomain(row) : null;
   }
 
-  countCompletedInCourse(studentId: number, courseId: number): Promise<number> {
-    return this.repo
+  async findCompletedLessonIds(studentId: number, courseId: number): Promise<number[]> {
+    const rows = await this.repo
       .createQueryBuilder('p')
       .innerJoin('p.lesson', 'l')
+      .select('p.lessonId', 'lessonId')
       .where('p.studentId = :studentId', { studentId })
       .andWhere('l.courseId = :courseId', { courseId })
       .andWhere('p.status = :status', { status: 'completed' })
-      .getCount();
+      .orderBy('p.lessonId', 'ASC')
+      .getRawMany<{ lessonId: number | string }>();
+    return rows.map((r) => Number(r.lessonId));
   }
 
   async save(progress: LessonProgress): Promise<LessonProgress> {
