@@ -47,3 +47,29 @@ src/
 | `npm run migration:generate -- src/database/migrations/Nome` | Gera migration a partir das entidades |
 | `npm run migration:revert`                    | Desfaz a última migration       |
 | `npm run seed`                                | Popula dados iniciais (idempotente) |
+
+## Arquitetura em camadas
+
+Cada domínio é um módulo Nest com as camadas abaixo:
+
+```
+Controller  →  Service  →  Repository  →  TypeORM (entidade)
+ (HTTP/DTO)   (regras)     (acesso a dados)
+```
+
+```
+src/
+├── main.ts / app.config.ts   # bootstrap, prefixo /api, ValidationPipe e filtro globais
+├── app.module.ts             # módulo raiz (ConfigModule, TypeOrmModule)
+├── common/filters/           # AllExceptionsFilter (formato único de erro)
+├── courses/                  # CoursesModule: controller, service, repository, dto, entity
+├── students/                 # StudentsModule
+├── enrollments/              # EnrollmentsModule (usa Courses e Students)
+└── database/                 # data-source (CLI), migrations, seed
+```
+
+Configuração global (`src/app.config.ts`):
+
+- Prefixo `/api` (exceto `/health`).
+- `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })`.
+- `AllExceptionsFilter`: todo erro sai como `{ message, details?, path, timestamp }`.

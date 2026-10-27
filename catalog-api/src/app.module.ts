@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller.js';
 import { entities } from './database/data-source.js';
+import { migrations } from './database/migrations/index.js';
 import { CoursesModule } from './courses/courses.module.js';
 import { StudentsModule } from './students/students.module.js';
 import { EnrollmentsModule } from './enrollments/enrollments.module.js';
@@ -18,6 +19,8 @@ import { EnrollmentsModule } from './enrollments/enrollments.module.js';
           .get<string>('DATABASE_URL', 'file:./data/catalog.db')
           .replace(/^file:/, ''),
         entities,
+        migrations,
+        migrationsRun: true,
         synchronize: false,
       }),
     }),
