@@ -6,6 +6,9 @@ API REST (Courses, Students, Enrollments) construída com NestJS + TypeScript.
 
 ```bash
 npm install
+cp .env.example .env     # DATABASE_URL (SQLite por padrão)
+npm run migration:run    # cria o schema do zero
+npm run seed             # 3 cursos e 2 estudantes
 npm run start:dev   # http://localhost:3000
 ```
 
@@ -31,3 +34,16 @@ src/
 ├── app.module.ts      # módulo raiz
 └── app.controller.ts  # GET /health
 ```
+
+## Banco de dados
+
+- ORM: TypeORM + SQLite (`better-sqlite3`), configurado por `DATABASE_URL` (ex.: `file:./data/catalog.db`).
+- Entidades: `Course`, `Student` (email único), `Enrollment` (`studentId` + `courseId` únicos).
+- Migrations em `src/database/migrations`.
+
+| Script                                        | Descrição                       |
+| --------------------------------------------- | ------------------------------- |
+| `npm run migration:run`                       | Aplica as migrations            |
+| `npm run migration:generate -- src/database/migrations/Nome` | Gera migration a partir das entidades |
+| `npm run migration:revert`                    | Desfaz a última migration       |
+| `npm run seed`                                | Popula dados iniciais (idempotente) |
