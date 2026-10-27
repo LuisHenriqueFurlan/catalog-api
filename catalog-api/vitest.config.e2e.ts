@@ -9,6 +9,7 @@ export default defineConfig({
     root: './',
     include: ['test/**/*.e2e-spec.ts'],
     fileParallelism: false,
+    setupFiles: ['test/setup-env.ts'],
     hookTimeout: 120000,
     testTimeout: 30000,
   },

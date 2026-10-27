@@ -193,6 +193,36 @@ Concluído em 0.0s: 20 lidos, 15 importados, 1 duplicados, 4 inválidos
   300 mil linhas (~19 MB). Importadas com `node --max-old-space-size=64 dist/cli/import-lessons.js ...`
   (heap de 64 MB), levaram ~17 s; a segunda execução reportou 300 mil duplicados e 0 inseridos.
 
+## Segurança
+
+| Medida | Como |
+| ------ | ---- |
+| Cabeçalhos HTTP | `helmet` (CSP, HSTS, `nosniff`, sem `X-Powered-By`); a CSP é relaxada só em `/docs` por causa do Swagger UI |
+| Rate limiting | `@nestjs/throttler`: `THROTTLE_LIMIT` req/min por IP (padrão 120) e limite mais estrito em `/api/auth/*` (`THROTTLE_AUTH_LIMIT`, padrão 10) → **429** |
+| CORS | Defina `CORS_ORIGINS` (lista separada por vírgula) para restringir origens; sem ela, aceita qualquer origem (apenas desenvolvimento) |
+| SQL parametrizado | Todo acesso usa o TypeORM (`find`/`QueryBuilder` com `:parametros`); nenhuma query concatena entrada do usuário. Curingas do `LIKE` (`%`, `_`, `\`) são escapados |
+| NoSQL | Filtros do Mongo usam `$eq` com valores literais (bloqueia injeção de operadores como `{"$ne": ...}`) |
+| Validação | `ValidationPipe` (`whitelist` + `forbidNonWhitelisted`): campo extra → 400; tamanhos máximos (título 200, descrição 2000, e-mail 254, senha 72, ...); `:id` não numérico → 400 |
+| Corpo da requisição | Limite padrão de 100 kb → **413** |
+| Senhas e tokens | bcrypt; JWT com expiração; mensagem única para credenciais inválidas; `passwordHash` nunca é serializado |
+| Configuração | `.env` validado na subida (`class-validator`): `JWT_SECRET` ≥ 16 caracteres e obrigatório, URLs e portas com formato correto; em `NODE_ENV=production` o segredo de exemplo é recusado e a app **não sobe** |
+
+Testes manuais/automatizados (`test/security.e2e-spec.ts`): `' OR 1=1 --` no login → 400;
+`/api/courses/1;DROP TABLE courses` → 400; `category=x' OR '1'='1` → 0 resultados; campos acima
+do limite → 400; corpo de 200 kb → 413; 5ª tentativa de login em sequência → 429.
+
+**`npm audit`** (27/10/2026): **0 vulnerabilidades nas dependências de produção**
+(`npm audit --omit=dev`). Com as de desenvolvimento são 5 (2 baixas, 1 moderada, 2 altas), todas
+vindas de ferramentas do CLI do Nest, que não vão para a imagem final:
+
+| Pacote | Severidade | Origem | Observação |
+| ------ | ---------- | ------ | ---------- |
+| `undici` ≤ 6.29 | alta | `@nestjs/mau` (devDependency do template) | afeta o cliente HTTP do Node; só usado por esse CLI |
+| `tmp` ≤ 0.2.5 | alta | `inquirer` → `external-editor` (CLI do Nest) | escrita via symlink em diretório temporário; só em tempo de desenvolvimento |
+
+A correção exige `npm audit fix --force` (muda versões maiores do CLI), então foi deixada para
+uma atualização dedicada das ferramentas.
+
 ## Erros
 
 Todo erro tem o mesmo formato (`AllExceptionsFilter`):

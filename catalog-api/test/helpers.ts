@@ -12,8 +12,6 @@ let mongo: MongoMemoryServer | undefined;
 export async function createTestApp(): Promise<INestApplication> {
   mongo ??= await MongoMemoryServer.create();
   process.env.MONGO_URL = mongo.getUri('catalog_test');
-  process.env.DATABASE_URL = ':memory:';
-  process.env.JWT_SECRET = 'segredo-de-teste';
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
