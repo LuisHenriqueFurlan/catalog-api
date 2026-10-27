@@ -8,7 +8,7 @@ e **frontend React**, usando JWT com roles, PostgreSQL, MongoDB (auditoria) e Ra
 | [`catalog-api/`](catalog-api) | API REST NestJS + TypeScript, worker de eventos e Docker Compose |
 | [`frontend/`](frontend) | SPA React + Vite + TypeScript para visualizar e operar o sistema |
 
-📖 **Swagger:** http://localhost:3000/docs (com o Compose também em http://localhost:8080/docs)
+📖 **Swagger:** http://localhost:8080/docs (Docker) ou http://localhost:3000/docs (dev local)
 
 ## Arquitetura
 
@@ -72,23 +72,23 @@ sequenceDiagram
 
 ## Como rodar
 
-### Tudo com Docker
+### Tudo com Docker (um comando)
 
 ```bash
-cd catalog-api
-JWT_SECRET=um-segredo-com-16+-caracteres docker compose up --build
+docker compose up --build
 ```
+
+Na raiz do projeto, sem configurar nada. Sobem `postgres`, `mongo`, `rabbitmq`, `migrate`
+(migrations + seed), `api`, `worker` e `web`.
 
 | Serviço | Endereço |
 | ------- | -------- |
 | Frontend | http://localhost:8080 (`WEB_PORT`) |
-| API / Swagger / saúde | http://localhost:3000 · `/docs` · `/health` (`API_PORT`) |
+| API / Swagger / saúde | http://localhost:3001 · `/docs` · `/health` (`API_PORT`) |
 | Painel do RabbitMQ | http://localhost:15672 (guest/guest) |
 
-Sobem `postgres`, `mongo`, `rabbitmq`, `migrate` (migrations + seed), `api`, `worker` e `web`.
-Login inicial: **admin@example.com / Admin123!** (`ADMIN_EMAIL` / `ADMIN_PASSWORD`).
-O Compose lê o `.env` de `catalog-api/`; o segredo do `.env.example` é recusado em produção.
-`docker compose down -v` apaga os dados.
+Login inicial: **admin@example.com / Admin123!** (`ADMIN_EMAIL` / `ADMIN_PASSWORD`). Para usar outro
+segredo JWT: `JWT_SECRET=... docker compose up --build`. `docker compose down -v` apaga os dados.
 
 ### Desenvolvimento local
 
