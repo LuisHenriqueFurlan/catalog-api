@@ -36,3 +36,18 @@ export class AlreadyEnrolledError extends ConflictError {
     super('Estudante já matriculado neste curso');
   }
 }
+export class LessonNotFoundError extends NotFoundError {
+  constructor() {
+    super('Aula não encontrada');
+  }
+}
+export class NotEnrolledError extends ForbiddenError {
+  constructor() {
+    super('Estudante não está matriculado neste curso');
+  }
+}
+export class DuplicateLessonOrderError extends ConflictError {
+  constructor() {
+    super('Já existe uma aula com esta ordem no curso');
+  }
+}

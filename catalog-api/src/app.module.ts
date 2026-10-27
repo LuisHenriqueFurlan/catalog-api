@@ -6,6 +6,7 @@ import { ormEntities } from './infrastructure/persistence/typeorm/entities/index
 import { HealthController } from './presentation/controllers/health.controller.js';
 import { CoursesModule } from './presentation/modules/courses.module.js';
 import { EnrollmentsModule } from './presentation/modules/enrollments.module.js';
+import { LessonsModule } from './presentation/modules/lessons.module.js';
 import { StudentsModule } from './presentation/modules/students.module.js';
 
 @Module({
@@ -26,6 +27,7 @@ import { StudentsModule } from './presentation/modules/students.module.js';
     }),
     CoursesModule,
     StudentsModule,
+    LessonsModule,
     EnrollmentsModule,
   ],
   controllers: [HealthController],

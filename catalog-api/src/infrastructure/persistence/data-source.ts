@@ -10,5 +10,5 @@ export default new DataSource({
     '',
   ),
   entities: ormEntities,
-  migrations: ['src/infrastructure/persistence/migrations/*.ts'],
+  migrations: ['src/infrastructure/persistence/migrations/[0-9]*-*.ts'],
 });

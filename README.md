@@ -33,7 +33,8 @@ Verifique: `curl http://localhost:3000/health` → `{"status":"ok"}`
 ## Banco de dados
 
 - ORM: TypeORM + SQLite (`better-sqlite3`), configurado por `DATABASE_URL` (ex.: `file:./data/catalog.db`).
-- Entidades: `Course`, `Student` (email único), `Enrollment` (`studentId` + `courseId` únicos).
+- Entidades: `Course`, `Student` (email único), `Enrollment` (`studentId` + `courseId` únicos),
+  `Lesson` (`courseId` + `order` únicos) e `LessonProgress` (`studentId` + `lessonId` únicos; status `not_started | in_progress | completed`).
 - Migrations em `src/infrastructure/persistence/migrations`.
 
 | Script                                        | Descrição                       |
@@ -85,6 +86,10 @@ HTTP → Controller (DTO validado) → UseCase → Entidade/Policy de domínio
 - **Repositórios por abstração:** os use cases recebem `ICourseRepository` etc. por
   injeção de dependência; o `PersistenceModule` liga cada porta à implementação TypeORM.
   Trocar o banco não toca em domínio nem em casos de uso.
+- **Progresso:** só quem está matriculado no curso registra progresso
+  (`LessonProgressPolicy` → 403 `NotEnrolledError`). `LessonProgress.complete()` preenche
+  `completedAt` (concluir de novo não altera a data). O progresso do curso é
+  `concluídas / total de aulas` (arredondado, 0 se o curso não tem aulas).
 - **Erros:** o domínio lança `NotFoundError`/`ConflictError`/`ValidationError`; o
   `AllExceptionsFilter` os traduz em 404/409/400.
 
@@ -105,7 +110,8 @@ Erros de validação trazem também `details` (lista de problemas por campo).
 | Status | Quando acontece                                                            |
 | ------ | -------------------------------------------------------------------------- |
 | 400    | Payload/query inválido (título < 3 caracteres, e-mail inválido, campo extra, `:id` não numérico) |
-| 404    | Curso, estudante ou matrícula inexistente (inclusive `studentId`/`courseId` no POST de matrícula) |
+| 403    | Estudante não matriculado no curso ao registrar/consultar progresso |
+| 404    | Curso, estudante, aula ou matrícula inexistente (inclusive `studentId`/`courseId` no POST de matrícula) |
 | 409    | E-mail de estudante já cadastrado; estudante já matriculado no curso       |
 | 500    | Falha inesperada (detalhes só no log do servidor, nunca na resposta)       |
 
@@ -143,6 +149,10 @@ Os testes e2e (`test/`) sobem o app completo com `@nestjs/testing` + supertest s
 | GET    | `/enrollments/:id`            | Busca matrícula                             | 200     |
 | DELETE | `/enrollments/:id`            | Cancela matrícula                           | 204     |
 | GET    | `/students/:id/enrollments`   | Matrículas (com curso) do estudante         | 200     |
+| GET    | `/courses/:id/lessons`        | Aulas do curso, por ordem                   | 200     |
+| POST   | `/courses/:id/lessons`        | Cria aula (`title`, `order`, `contentUrl`)  | 201     |
+| POST   | `/lessons/:id/complete`       | Conclui aula (`{ "studentId": 1 }`), idempotente | 200 |
+| GET    | `/students/:sid/courses/:cid/progress` | Progresso (%) do estudante no curso | 200   |
 
 Listagens retornam `{ "data": [...], "page": 1, "limit": 10, "total": 3 }`
 (`limit` máx. 100). `GET /health` fica fora do prefixo.
