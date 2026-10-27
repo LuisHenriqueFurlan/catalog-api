@@ -23,8 +23,8 @@ Verifique: `curl http://localhost:3000/health` → `{"status":"ok"}`
 | `npm run start:dev`  | Servidor com reload          |
 | `npm run build`      | Compila para `dist/`         |
 | `npm run start:prod` | Executa o build              |
-| `npm test`           | Testes unitários (Vitest)    |
-| `npm run test:e2e`   | Testes e2e (supertest)       |
+| `npm test`           | Todos os testes (unitário + e2e) |
+| `npm run test:e2e`   | Apenas e2e (supertest)       |
 
 ## Estrutura
 
@@ -97,3 +97,14 @@ Erros de validação trazem também `details` (lista de problemas por campo).
 
 A unicidade também é garantida pelo banco (`UNIQUE`); uma violação que escape
 da checagem do service (corrida entre requisições) também vira `409`.
+
+## Testes
+
+```bash
+npm test
+```
+
+Os testes e2e (`test/`) sobem o app completo com `@nestjs/testing` + supertest sobre
+**SQLite em memória** (`DATABASE_URL=:memory:`); as migrations rodam no boot do app
+(`migrationsRun`). Novas migrations devem ser registradas em
+`src/database/migrations/index.ts`.
