@@ -73,3 +73,27 @@ Configuração global (`src/app.config.ts`):
 - Prefixo `/api` (exceto `/health`).
 - `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })`.
 - `AllExceptionsFilter`: todo erro sai como `{ message, details?, path, timestamp }`.
+
+## Erros
+
+Todo erro tem o mesmo formato (`AllExceptionsFilter`):
+
+```json
+{
+  "message": "Curso não encontrado",
+  "path": "/api/courses/999",
+  "timestamp": "2026-10-27T15:22:14.885Z"
+}
+```
+
+Erros de validação trazem também `details` (lista de problemas por campo).
+
+| Status | Quando acontece                                                            |
+| ------ | -------------------------------------------------------------------------- |
+| 400    | Payload/query inválido (título < 3 caracteres, e-mail inválido, campo extra, `:id` não numérico) |
+| 404    | Curso, estudante ou matrícula inexistente (inclusive `studentId`/`courseId` no POST de matrícula) |
+| 409    | E-mail de estudante já cadastrado; estudante já matriculado no curso       |
+| 500    | Falha inesperada (detalhes só no log do servidor, nunca na resposta)       |
+
+A unicidade também é garantida pelo banco (`UNIQUE`); uma violação que escape
+da checagem do service (corrida entre requisições) também vira `409`.
