@@ -1,49 +1,151 @@
-# API de Catálogo de Cursos — NestJS
+# Catálogo de Cursos 2.0 — Arquitetura, Eventos e Segurança
 
-API REST (Courses, Students, Enrollments) construída com NestJS + TypeScript.
-O código fica em [`catalog-api/`](catalog-api); a versão Express virá depois.
+API backend de uma plataforma de cursos (cursos, aulas, matrículas, progresso) construída com
+**NestJS + TypeScript**, usando **Clean Architecture / DDD**, **JWT com roles**, **PostgreSQL**,
+**MongoDB** para auditoria e **RabbitMQ** para eventos assíncronos. Sobe inteira com um
+`docker compose up`.
+
+> O código está em [`catalog-api/`](catalog-api). A versão Express do desafio do nível 1 virá depois.
+
+## Arquitetura geral
+
+```mermaid
+flowchart LR
+    C([Cliente]) -- "HTTP + JWT" --> API["API NestJS<br/>(controllers → use cases → domínio)"]
+    API -- "SQL" --> PG[("PostgreSQL<br/>cursos, aulas, matrículas,<br/>progresso, usuários")]
+    API -- "publica eventos" --> MQ{{"RabbitMQ<br/>exchange catalog.events"}}
+    MQ -- "fila audit.events" --> W["Worker<br/>(consumer)"]
+    W -- "grava" --> MG[("MongoDB<br/>audit_logs")]
+    API -- "GET /audit-logs" --> MG
+    MQ -. "falha → DLQ" .-> DLQ[/"audit.events.dlq"/]
+```
+
+A API é organizada em camadas, com dependências apontando para dentro
+(veja [Arquitetura em camadas](#arquitetura-clean-architecture--ddd)):
+`presentation → application → domain`, e a `infrastructure` implementa as portas do domínio
+(repositórios, hash de senha, JWT, publicação de eventos, auditoria).
+
+## Serviços que sobem com Docker
+
+| Serviço    | Imagem                     | Função                                                | Porta no host |
+| ---------- | -------------------------- | ----------------------------------------------------- | ------------- |
+| `api`      | build deste repositório    | API REST + Swagger (`/docs`), `/health`, `/metrics`   | `3000` (`API_PORT`) |
+| `worker`   | build deste repositório    | Consome `audit.events` e grava em `audit_logs`        | —             |
+| `migrate`  | build deste repositório    | Roda migrations e seed (admin inicial) e termina      | —             |
+| `postgres` | `postgres:16-alpine`       | Banco relacional                                      | —             |
+| `mongo`    | `mongo:7`                  | Auditoria (`audit_logs`)                              | —             |
+| `rabbitmq` | `rabbitmq:3.13-management` | Broker de eventos                                     | `15672` (painel, guest/guest) |
 
 ## Como rodar
+
+### Com Docker (recomendado)
+
+```bash
+cd catalog-api
+docker compose up --build
+```
+
+O Compose espera cada banco/broker ficar saudável, roda `migrate` (migrations + seed) e só então
+sobe `api` e `worker`. Depois:
+
+- API: http://localhost:3000 — Swagger: http://localhost:3000/docs — saúde: http://localhost:3000/health
+- Admin inicial: `admin@example.com` / `Admin123!` (mude com `ADMIN_EMAIL` / `ADMIN_PASSWORD`)
+- Variáveis úteis: `JWT_SECRET` (defina um valor próprio fora de testes) e `API_PORT` (se a 3000 estiver ocupada)
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"Admin123!"}' | jq -r .accessToken)
+curl http://localhost:3000/api/courses -H "Authorization: Bearer $TOKEN"
+```
+
+O Compose lê o `.env` da pasta `catalog-api` (se você copiou o `.env.example`, ajuste o `JWT_SECRET`
+de lá: o segredo de exemplo é recusado em produção). Migrations manuais: `docker compose run --rm migrate`. Para parar e apagar os dados:
+`docker compose down -v`.
+
+### Sem Docker (SQLite + serviços locais)
 
 ```bash
 cd catalog-api
 npm install
-cp .env.example .env     # DATABASE_URL (SQLite por padrão)
-docker run -d --name catalog-mongo -p 27017:27017 mongo:7   # MongoDB (auditoria)
-npm run migration:run    # cria o schema do zero
-npm run seed             # 3 cursos e 2 estudantes
-npm run start:dev   # http://localhost:3000
+cp .env.example .env                       # SQLite por padrão; defina JWT_SECRET
+docker run -d --name catalog-mongo -p 27017:27017 mongo:7        # auditoria
+npm run migration:run                      # cria o schema do zero
+npm run seed                               # 3 cursos, 2 estudantes e o admin
+npm run start:dev                          # http://localhost:3000
 ```
 
-A porta pode ser alterada com a variável `PORT`.
+Sem `RABBITMQ_URL`, a API grava a auditoria direto no Mongo. Para usar a fila, suba o RabbitMQ,
+defina `RABBITMQ_URL` e rode o worker (veja [Mensageria](#mensageria-rabbitmq-e-worker)).
+O Mongo é necessário em ambos os casos (a API lê `/audit-logs` dele).
 
-Verifique: `curl http://localhost:3000/health` → `{"status":"ok"}`
+`DATABASE_URL` aceita SQLite (`file:./data/catalog.db`) ou PostgreSQL
+(`postgres://usuario:senha@host:5432/banco`); cada um tem seu conjunto de migrations.
 
-📖 Documentação interativa (Swagger/OpenAPI): **http://localhost:3000/docs**
+## Fluxos principais
 
-## Scripts
+**Matrícula** — `POST /api/enrollments`
 
-| Script               | Descrição                    |
-| -------------------- | ---------------------------- |
-| `npm run start:dev`  | Servidor com reload          |
-| `npm run build`      | Compila para `dist/`         |
-| `npm run start:prod` | Executa o build              |
-| `npm test`           | Todos os testes (unitário + e2e) |
-| `npm run test:e2e`   | Apenas e2e (supertest)       |
+1. O JWT é validado; um `STUDENT` só pode matricular a si mesmo (`ADMIN` matricula qualquer um).
+2. `EnrollStudentUseCase` confere que estudante e curso existem (404) e aplica a regra de domínio
+   `EnrollmentPolicy`: matrícula duplicada → 409.
+3. A matrícula é salva e o evento `student.enrolled` é publicado no RabbitMQ.
+
+**Conclusão de aula** — `POST /api/lessons/:id/complete`
+
+1. `CompleteLessonUseCase` valida estudante e aula (404) e a regra `LessonProgressPolicy`:
+   só quem está matriculado no curso registra progresso (403).
+2. `LessonProgress.complete()` marca `completed` e preenche `completedAt` (concluir de novo é
+   idempotente e não duplica o evento).
+3. `lesson.completed` é publicado. `GET /api/students/:id/courses/:id/progress` devolve o percentual.
+
+**Auditoria** — assíncrona e desacoplada
+
+1. Os eventos vão para a exchange `catalog.events` e para a fila durável `audit.events`.
+2. O `worker` consome com *ack* manual, grava em `audit_logs` (idempotente por `eventId`) e loga
+   `Evento processado`. Se ele estiver offline, as mensagens aguardam na fila; falhas vão para a DLQ.
+3. `GET /api/audit-logs` (ADMIN) consulta o Mongo por `event`, `studentId` e período.
+
+## Diferenciais técnicos
+
+- **Clean Architecture + DDD:** domínio puro (entidades que se validam, value object `Email`,
+  *policies* de domínio, erros sem HTTP), casos de uso orquestrando portas, infraestrutura plugável.
+- **Segurança:** JWT + roles com guards globais, bcrypt, helmet, rate limiting, validação estrita de
+  entrada, SQL parametrizado, filtros Mongo à prova de injeção de operadores, validação de `.env`,
+  `npm audit` documentado.
+- **Event-driven:** RabbitMQ com mensagens persistentes, publisher confirms, DLQ, consumer com
+  reconexão e gravação idempotente; reprocessa tudo que ficou pendente com o worker offline.
+- **Dois bancos, cada um no seu papel:** PostgreSQL (transacional) e MongoDB (auditoria), com
+  migrations versionadas para SQLite e PostgreSQL e índices medidos.
+- **Streams:** importação de CSV em lotes sem carregar o arquivo na memória (300 mil linhas com
+  heap de 64 MB).
+- **Observabilidade:** logs JSON com `requestId`, `/health` por componente (`ok`/`degraded`/`down`)
+  e `/metrics` no formato Prometheus.
+- **Qualidade:** 55 testes (unitários de domínio/casos de uso e e2e com `supertest`), executados
+  também contra PostgreSQL real; Swagger e Docker Compose completos.
+
+## Scripts (em `catalog-api/`)
+
+| Script                         | Descrição                                                    |
+| ------------------------------ | ------------------------------------------------------------ |
+| `npm run start:dev`            | API com reload                                               |
+| `npm run start:worker`         | Worker consumidor da fila (`start:worker:prod` após o build) |
+| `npm run build` / `start:prod` | Compila / executa o build                                    |
+| `npm run migration:run`        | Aplica migrations (`migration:run:prod` usa o `dist/`)       |
+| `npm run migration:generate -- <caminho>` | Gera migration a partir das entidades     |
+| `npm run seed`                 | Cursos, estudantes e admin iniciais (`seed:prod` no build)   |
+| `npm run import:lessons -- <csv>` | Importa aulas de um CSV por streaming                     |
+| `npm test`                     | Todos os testes (unitários + e2e)                            |
 
 ## Banco de dados
 
-- ORM: TypeORM + SQLite (`better-sqlite3`), configurado por `DATABASE_URL` (ex.: `file:./data/catalog.db`).
-- Entidades: `Course`, `Student` (email único), `Enrollment` (`studentId` + `courseId` únicos),
-  `Lesson` (`courseId` + `order` únicos) e `LessonProgress` (`studentId` + `lessonId` únicos; status `not_started | in_progress | completed`).
-- Migrations em `src/infrastructure/persistence/migrations`.
-
-| Script                                        | Descrição                       |
-| --------------------------------------------- | ------------------------------- |
-| `npm run migration:run`                       | Aplica as migrations            |
-| `npm run migration:generate -- src/infrastructure/persistence/migrations/Nome` | Gera migration a partir das entidades |
-| `npm run migration:revert`                    | Desfaz a última migration       |
-| `npm run seed`                                | Popula dados iniciais (idempotente) |
+- ORM: TypeORM, com `DATABASE_URL` apontando para SQLite (dev/testes) ou PostgreSQL (Docker/produção).
+- Entidades: `Course`, `Student` (e-mail único), `Enrollment` (`studentId` + `courseId` únicos),
+  `Lesson` (`courseId` + `order` únicos), `LessonProgress` (`studentId` + `lessonId` únicos; status
+  `not_started | in_progress | completed`) e `User` (e-mail único, role `STUDENT | ADMIN`).
+- Migrations em `src/infrastructure/persistence/migrations/{sqlite,postgres}`; novas migrations
+  devem ser registradas no `index.ts` do respectivo dialeto. Para gerar uma:
+  `DATABASE_URL=<url> npm run migration:generate -- src/infrastructure/persistence/migrations/<dialeto>/<Nome>`
+  (com o banco já migrado).
 
 ## Arquitetura (Clean Architecture + DDD)
 
@@ -298,7 +400,13 @@ npm test
 Os testes e2e (`test/`) sobem o app completo com `@nestjs/testing` + supertest sobre
 **SQLite em memória** (`DATABASE_URL=:memory:`); as migrations rodam no boot do app
 (`migrationsRun`). Novas migrations devem ser registradas em
-`src/infrastructure/persistence/migrations/index.ts`.
+`src/infrastructure/persistence/migrations/<dialeto>/index.ts`.
+
+Para rodar a mesma suíte contra um PostgreSQL real (o schema é recriado a cada arquivo de teste):
+
+```bash
+TEST_DATABASE_URL=postgres://catalog:catalog@localhost:5432/catalog npm test
+```
 
 ## Autenticação e autorização (JWT + roles)
 
@@ -425,16 +533,6 @@ curl -X POST http://localhost:3000/api/enrollments   -H "Content-Type: applicati
 # cursos do estudante
 curl http://localhost:3000/api/students/1/enrollments
 ```
-
-## Docker
-
-```bash
-cd catalog-api
-docker compose up --build   # API em http://localhost:3000 (Swagger em /docs)
-```
-
-O banco SQLite fica no volume `db-data` (`/app/data/catalog.db`) e as migrations
-rodam sozinhas ao subir. Para popular dados de exemplo sem Docker: `npm run seed`.
 
 ## Licença
 

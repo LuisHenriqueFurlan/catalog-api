@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+import pg from 'pg';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module.js';
@@ -9,7 +10,17 @@ import { UserOrmEntity } from '../src/infrastructure/persistence/typeorm/entitie
 
 let mongo: MongoMemoryServer | undefined;
 
+async function resetPostgres(): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url || !/^postgres(ql)?:\/\//.test(url)) return;
+  const db = new pg.Client({ connectionString: url });
+  await db.connect();
+  await db.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  await db.end();
+}
+
 export async function createTestApp(): Promise<INestApplication> {
+  await resetPostgres();
   mongo ??= await MongoMemoryServer.create();
   process.env.MONGO_URL = mongo.getUri('catalog_test');
   const moduleRef = await Test.createTestingModule({

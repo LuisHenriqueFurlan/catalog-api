@@ -1,14 +1,85 @@
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgres://catalog:catalog@postgres:5432/catalog
+  MONGO_URL: mongodb://mongo:27017/catalog
+  RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+  JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-before-deploying}
+  JWT_EXPIRES_IN: 1h
+  ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
+
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: catalog
+      POSTGRES_PASSWORD: catalog
+      POSTGRES_DB: catalog
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catalog -d catalog"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports:
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  migrate:
+    build: .
+    environment: *app-env
+    command: ["sh", "-c", "npm run migration:run:prod && npm run seed:prod"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build: .
+    environment: *app-env
     ports:
-      - "3000:3000"
-    environment:
-      PORT: 3000
-      DATABASE_URL: file:/app/data/catalog.db
-    volumes:
-      # o banco SQLite persiste neste volume (migrations rodam no boot)
-      - db-data:/app/data
+      - "${API_PORT:-3000}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  worker:
+    build: .
+    environment: *app-env
+    command: ["node", "dist/worker"]
+    healthcheck:
+      disable: true
+    depends_on:
+      mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
 volumes:
-  db-data:
+  postgres-data:
+  mongo-data:
+  rabbitmq-data:

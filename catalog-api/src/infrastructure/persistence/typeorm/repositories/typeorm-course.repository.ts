@@ -21,7 +21,7 @@ export class TypeOrmCourseRepository implements ICourseRepository {
     if (search) {
       const term = `%${search.replace(/[\\%_]/g, '\\$&')}%`;
       qb.andWhere(
-        "(c.title LIKE :term ESCAPE '\\' OR c.description LIKE :term ESCAPE '\\')",
+        "(LOWER(c.title) LIKE LOWER(:term) ESCAPE '\\' OR LOWER(c.description) LIKE LOWER(:term) ESCAPE '\\')",
         { term },
       );
     }

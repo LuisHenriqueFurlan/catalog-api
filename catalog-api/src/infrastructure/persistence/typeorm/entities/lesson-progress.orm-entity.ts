@@ -27,7 +27,7 @@ export class LessonProgressOrmEntity {
   @Column({ type: 'varchar', default: 'not_started' })
   status: 'not_started' | 'in_progress' | 'completed';
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: Date, nullable: true })
   completedAt: Date | null;
 
   @ManyToOne(() => StudentOrmEntity, { onDelete: 'CASCADE' })
