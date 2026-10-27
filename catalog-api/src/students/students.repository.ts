@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  Paginated,
+  PaginationQueryDto,
+} from '../common/dto/pagination-query.dto.js';
 import { Student } from './student.entity.js';
 import { CreateStudentDto } from './dto/create-student.dto.js';
 
@@ -10,8 +14,13 @@ export class StudentsRepository {
     @InjectRepository(Student) private readonly repo: Repository<Student>,
   ) {}
 
-  findAll() {
-    return this.repo.find({ order: { id: 'ASC' } });
+  async findPage({ page, limit }: PaginationQueryDto): Promise<Paginated<Student>> {
+    const [data, total] = await this.repo.findAndCount({
+      order: { id: 'ASC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, page, limit, total };
   }
 
   findById(id: number) {
@@ -24,5 +33,13 @@ export class StudentsRepository {
 
   create(dto: CreateStudentDto) {
     return this.repo.save(this.repo.create(dto));
+  }
+
+  save(student: Student) {
+    return this.repo.save(student);
+  }
+
+  async remove(student: Student) {
+    await this.repo.remove(student);
   }
 }
