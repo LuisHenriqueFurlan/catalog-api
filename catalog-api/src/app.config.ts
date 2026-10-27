@@ -1,4 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 
 /** Configuração compartilhada entre a aplicação e os testes e2e. */
@@ -13,4 +14,11 @@ export function configureApp(app: INestApplication) {
     }),
   );
   app.useGlobalFilters(new AllExceptionsFilter());
+
+  const config = new DocumentBuilder()
+    .setTitle('Catálogo de Cursos')
+    .setDescription('API REST de cursos, estudantes e matrículas')
+    .setVersion('1.0')
+    .build();
+  SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, config));
 }

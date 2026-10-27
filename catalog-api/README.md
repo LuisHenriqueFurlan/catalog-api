@@ -16,6 +16,8 @@ A porta pode ser alterada com a variável `PORT`.
 
 Verifique: `curl http://localhost:3000/health` → `{"status":"ok"}`
 
+📖 Documentação interativa (Swagger/OpenAPI): **http://localhost:3000/docs**
+
 ## Scripts
 
 | Script               | Descrição                    |
@@ -108,3 +110,45 @@ Os testes e2e (`test/`) sobem o app completo com `@nestjs/testing` + supertest s
 **SQLite em memória** (`DATABASE_URL=:memory:`); as migrations rodam no boot do app
 (`migrationsRun`). Novas migrations devem ser registradas em
 `src/database/migrations/index.ts`.
+
+## Endpoints (prefixo `/api`)
+
+| Método | Rota                          | Descrição                                   | Sucesso |
+| ------ | ----------------------------- | ------------------------------------------- | ------- |
+| POST   | `/courses`                    | Cria curso                                  | 201     |
+| GET    | `/courses?category=&page=&limit=` | Lista (filtro e paginação)              | 200     |
+| GET    | `/courses/:id`                | Busca curso                                 | 200     |
+| PUT    | `/courses/:id`                | Atualiza curso                              | 200     |
+| DELETE | `/courses/:id`                | Remove curso                                | 204     |
+| POST   | `/students`                   | Cria estudante (e-mail único)               | 201     |
+| GET    | `/students?page=&limit=`      | Lista estudantes                            | 200     |
+| GET    | `/students/:id`               | Busca estudante                             | 200     |
+| PUT    | `/students/:id`               | Atualiza estudante                          | 200     |
+| DELETE | `/students/:id`               | Remove estudante                            | 204     |
+| POST   | `/enrollments`                | Matricula (`studentId`, `courseId`)         | 201     |
+| GET    | `/enrollments?page=&limit=`   | Lista matrículas                            | 200     |
+| GET    | `/enrollments/:id`            | Busca matrícula                             | 200     |
+| DELETE | `/enrollments/:id`            | Cancela matrícula                           | 204     |
+| GET    | `/students/:id/enrollments`   | Matrículas (com curso) do estudante         | 200     |
+
+Listagens retornam `{ "data": [...], "page": 1, "limit": 10, "total": 3 }`
+(`limit` máx. 100). `GET /health` fica fora do prefixo.
+
+## Exemplos (curl)
+
+```bash
+# criar curso
+curl -X POST http://localhost:3000/api/courses   -H "Content-Type: application/json"   -d '{"title":"NestJS na prática","category":"Backend"}'
+
+# listar cursos de uma categoria
+curl "http://localhost:3000/api/courses?category=Backend&page=1&limit=5"
+
+# criar estudante
+curl -X POST http://localhost:3000/api/students   -H "Content-Type: application/json"   -d '{"name":"Ana Souza","email":"ana@example.com"}'
+
+# matricular
+curl -X POST http://localhost:3000/api/enrollments   -H "Content-Type: application/json"   -d '{"studentId":1,"courseId":1}'
+
+# cursos do estudante
+curl http://localhost:3000/api/students/1/enrollments
+```
