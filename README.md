@@ -9,6 +9,7 @@ O código fica em [`catalog-api/`](catalog-api); a versão Express virá depois.
 cd catalog-api
 npm install
 cp .env.example .env     # DATABASE_URL (SQLite por padrão)
+docker run -d --name catalog-mongo -p 27017:27017 mongo:7   # MongoDB (auditoria)
 npm run migration:run    # cria o schema do zero
 npm run seed             # 3 cursos e 2 estudantes
 npm run start:dev   # http://localhost:3000
@@ -92,6 +93,35 @@ HTTP → Controller (DTO validado) → UseCase → Entidade/Policy de domínio
   `concluídas / total de aulas` (arredondado, 0 se o curso não tem aulas).
 - **Erros:** o domínio lança `NotFoundError`/`ConflictError`/`ValidationError`; o
   `AllExceptionsFilter` os traduz em 404/409/400.
+
+## Auditoria (MongoDB)
+
+Eventos importantes ficam na coleção `audit_logs` do MongoDB, separada do banco relacional
+(`MONGO_URL`, padrão `mongodb://localhost:27017/catalog`):
+
+```json
+{
+  "event": "student.enrolled",
+  "timestamp": "2026-01-01T12:00:00.000Z",
+  "actorId": "3",
+  "payload": { "studentId": "1", "courseId": "2", "enrollmentId": "7" }
+}
+```
+
+| Evento             | Quando                                      | Payload                                  |
+| ------------------ | ------------------------------------------- | ---------------------------------------- |
+| `student.enrolled` | Ao criar uma matrícula                      | `studentId`, `courseId`, `enrollmentId`  |
+| `lesson.completed` | Na primeira conclusão de uma aula (repetir não duplica) | `studentId`, `lessonId`, `courseId` |
+
+`actorId` é o id do usuário autenticado que executou a ação.
+
+- Os use cases dependem da porta `IAuditLog`; a implementação `AuditLogService`
+  (`infrastructure/audit`) é a única que conhece o Mongo. Falha ao gravar auditoria é
+  logada e **não derruba** a requisição.
+- `GET /api/audit-logs` (ADMIN) filtra por `event`, `studentId` e período (`from`/`to`, ISO 8601),
+  com paginação, do mais recente para o mais antigo. Os filtros são enviados ao Mongo como
+  igualdade literal (`$eq`), o que bloqueia injeção de operadores.
+- Os testes usam `mongodb-memory-server` (o binário é baixado na primeira execução).
 
 ## Erros
 
@@ -191,6 +221,7 @@ registrar como ADMIN pela API.
 | GET    | `/enrollments?page=&limit=`   | Lista matrículas                            | 200     |
 | GET    | `/enrollments/:id`            | Busca matrícula                             | 200     |
 | DELETE | `/enrollments/:id`            | Cancela matrícula                           | 204     |
+| GET    | `/audit-logs?event=&studentId=&from=&to=` | Logs de auditoria (ADMIN)         | 200     |
 | GET    | `/reports/courses/enrollments` | Matrículas por curso (ADMIN)               | 200     |
 | GET    | `/students/:id/enrollments`   | Matrículas (com curso) do estudante         | 200     |
 | GET    | `/courses/:id/lessons`        | Aulas do curso, por ordem                   | 200     |

@@ -9,6 +9,7 @@ import { IEnrollmentRepository } from '../../../domain/repositories/enrollment.r
 import { ILessonProgressRepository } from '../../../domain/repositories/lesson-progress.repository.js';
 import { ILessonRepository } from '../../../domain/repositories/lesson.repository.js';
 import { IStudentRepository } from '../../../domain/repositories/student.repository.js';
+import { IAuditLog } from '../../ports/audit-log.js';
 import { CompleteLessonUseCase } from './complete-lesson.usecase.js';
 import { GetStudentCourseProgressUseCase } from './get-student-course-progress.usecase.js';
 
@@ -41,8 +42,15 @@ function setup(enrolled: boolean) {
   const enrollments = {
     findByPair: async () => (enrolled ? Enrollment.restore({ id: 1, studentId: 1, courseId: 1, createdAt: now }) : null),
   } as unknown as IEnrollmentRepository;
+  const events: string[] = [];
+  const audit = {
+    record: async (event: string) => {
+      events.push(event);
+    },
+  } as unknown as IAuditLog;
   return {
-    complete: new CompleteLessonUseCase(lessons, progress, students, enrollments),
+    events,
+    complete: new CompleteLessonUseCase(lessons, progress, students, enrollments, audit),
     getProgress: new GetStudentCourseProgressUseCase(lessons, progress, students, courses, enrollments),
   };
 }
@@ -59,12 +67,13 @@ describe('CompleteLessonUseCase', () => {
   });
 
   it('conclui, preenche completedAt e é idempotente', async () => {
-    const { complete } = setup(true);
+    const { complete, events } = setup(true);
     const first = await complete.execute({ studentId: 1, lessonId: 1 });
     expect(first.status).toBe('completed');
     expect(first.completedAt).toBeInstanceOf(Date);
     const again = await complete.execute({ studentId: 1, lessonId: 1 });
     expect(again.completedAt).toBe(first.completedAt);
+    expect(events).toEqual(['lesson.completed']);
   });
 });
 

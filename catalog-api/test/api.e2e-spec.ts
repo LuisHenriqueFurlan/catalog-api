@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common';
-import { client, createTestApp, signUp } from './helpers.js';
+import { client, closeTestApp, createTestApp, signUp } from './helpers.js';
 
 describe('API (e2e)', () => {
   let app: INestApplication;
@@ -12,7 +12,7 @@ describe('API (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    await closeTestApp(app);
   });
 
   it('GET /health', async () => {
@@ -139,7 +139,7 @@ describe('Consultas avançadas e relatórios (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    await closeTestApp(app);
   });
 
   it('search no título ou na descrição, combinável com category', async () => {

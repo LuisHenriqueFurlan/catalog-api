@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common';
-import { client, createTestApp, PASSWORD, signUp } from './helpers.js';
+import { client, closeTestApp, createTestApp, PASSWORD, signUp } from './helpers.js';
 
 describe('Auth (e2e)', () => {
   let app: INestApplication;
@@ -15,7 +15,7 @@ describe('Auth (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    await closeTestApp(app);
   });
 
   it('register: role STUDENT, sem expor passwordHash; e-mail duplicado -> 409', async () => {

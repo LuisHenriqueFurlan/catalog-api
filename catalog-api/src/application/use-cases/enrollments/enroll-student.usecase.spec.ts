@@ -9,6 +9,7 @@ import {
 import { ICourseRepository } from '../../../domain/repositories/course.repository.js';
 import { IEnrollmentRepository } from '../../../domain/repositories/enrollment.repository.js';
 import { IStudentRepository } from '../../../domain/repositories/student.repository.js';
+import { IAuditLog } from '../../ports/audit-log.js';
 import { EnrollStudentUseCase } from './enroll-student.usecase.js';
 
 describe('EnrollStudentUseCase', () => {
@@ -31,12 +32,19 @@ describe('EnrollStudentUseCase', () => {
       return e;
     },
   } as unknown as IEnrollmentRepository;
-  const useCase = new EnrollStudentUseCase(enrollments, students, courses);
+  const events: string[] = [];
+  const audit = {
+    record: async (event: string) => {
+      events.push(event);
+    },
+  } as unknown as IAuditLog;
+  const useCase = new EnrollStudentUseCase(enrollments, students, courses, audit);
 
   it('matricula e depois rejeita duplicidade', async () => {
     await useCase.execute({ studentId: 1, courseId: 1 });
     await expect(useCase.execute({ studentId: 1, courseId: 1 })).rejects.toThrow(AlreadyEnrolledError);
     expect(saved).toHaveLength(1);
+    expect(events).toEqual(['student.enrolled']);
   });
 
   it('estudante ou curso inexistente', async () => {

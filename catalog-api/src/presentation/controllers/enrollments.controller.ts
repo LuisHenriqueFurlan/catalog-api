@@ -72,7 +72,7 @@ export class EnrollmentsController {
   @ApiConflictResponse({ description: 'Estudante já matriculado no curso' })
   create(@Body() dto: CreateEnrollmentDto, @CurrentUser() user: TokenPayload) {
     assertSelfOrAdmin(user, dto.studentId);
-    return this.enrollStudent.execute(dto);
+    return this.enrollStudent.execute({ ...dto, actorId: user.userId });
   }
 
   @Roles('ADMIN')

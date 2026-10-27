@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuditModule } from './infrastructure/audit/audit.module.js';
 import { migrations } from './infrastructure/persistence/migrations/index.js';
 import { ormEntities } from './infrastructure/persistence/typeorm/entities/index.js';
 import { HealthController } from './presentation/controllers/health.controller.js';
+import { AuditLogsModule } from './presentation/modules/audit.module.js';
 import { AuthModule } from './presentation/modules/auth.module.js';
 import { CoursesModule } from './presentation/modules/courses.module.js';
 import { EnrollmentsModule } from './presentation/modules/enrollments.module.js';
@@ -27,6 +29,8 @@ import { StudentsModule } from './presentation/modules/students.module.js';
         synchronize: false,
       }),
     }),
+    AuditModule,
+    AuditLogsModule,
     AuthModule,
     CoursesModule,
     StudentsModule,

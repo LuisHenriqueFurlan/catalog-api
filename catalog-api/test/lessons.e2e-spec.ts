@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common';
-import { client, createTestApp, signUp } from './helpers.js';
+import { client, closeTestApp, createTestApp, signUp } from './helpers.js';
 
 describe('Lessons (e2e)', () => {
   let app: INestApplication;
@@ -28,7 +28,7 @@ describe('Lessons (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    await closeTestApp(app);
   });
 
   it('lista aulas do curso em ordem e rejeita ordem repetida (409)', async () => {

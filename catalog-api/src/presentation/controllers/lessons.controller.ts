@@ -64,7 +64,11 @@ export class LessonsController {
     @CurrentUser() user: TokenPayload,
   ) {
     assertSelfOrAdmin(user, dto.studentId);
-    return this.completeLesson.execute({ studentId: dto.studentId, lessonId });
+    return this.completeLesson.execute({
+      studentId: dto.studentId,
+      lessonId,
+      actorId: user.userId,
+    });
   }
 
   @Get('students/:studentId/courses/:courseId/progress')

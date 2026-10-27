@@ -1,12 +1,17 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/infrastructure/http/app.config.js';
 import { UserOrmEntity } from '../src/infrastructure/persistence/typeorm/entities/index.js';
 
+let mongo: MongoMemoryServer | undefined;
+
 export async function createTestApp(): Promise<INestApplication> {
+  mongo ??= await MongoMemoryServer.create();
+  process.env.MONGO_URL = mongo.getUri('catalog_test');
   process.env.DATABASE_URL = ':memory:';
   process.env.JWT_SECRET = 'segredo-de-teste';
   const moduleRef = await Test.createTestingModule({
@@ -16,6 +21,12 @@ export async function createTestApp(): Promise<INestApplication> {
   configureApp(app);
   await app.init();
   return app;
+}
+
+export async function closeTestApp(app: INestApplication) {
+  await app.close();
+  await mongo?.stop();
+  mongo = undefined;
 }
 
 export function client(app: INestApplication, token?: string) {

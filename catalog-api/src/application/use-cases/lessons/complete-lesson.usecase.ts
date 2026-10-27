@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { IAuditLog } from '../../ports/audit-log.js';
+import { AUDIT_EVENTS } from '../../../domain/entities/audit-log.entity.js';
 import { LessonProgress } from '../../../domain/entities/lesson-progress.entity.js';
 import { LessonNotFoundError, StudentNotFoundError } from '../../../domain/errors.js';
 import { IEnrollmentRepository } from '../../../domain/repositories/enrollment.repository.js';
@@ -16,11 +18,16 @@ export class CompleteLessonUseCase {
     private readonly progress: ILessonProgressRepository,
     private readonly students: IStudentRepository,
     enrollments: IEnrollmentRepository,
+    private readonly audit: IAuditLog,
   ) {
     this.policy = new LessonProgressPolicy(enrollments);
   }
 
-  async execute(input: { studentId: number; lessonId: number }): Promise<LessonProgress> {
+  async execute(input: {
+    studentId: number;
+    lessonId: number;
+    actorId?: number;
+  }): Promise<LessonProgress> {
     if (!(await this.students.findById(input.studentId))) throw new StudentNotFoundError();
     const lesson = await this.lessons.findById(input.lessonId);
     if (!lesson) throw new LessonNotFoundError();
@@ -29,7 +36,16 @@ export class CompleteLessonUseCase {
     const progress =
       (await this.progress.findByStudentAndLesson(input.studentId, input.lessonId)) ??
       LessonProgress.start(input.studentId, input.lessonId);
+    const alreadyCompleted = progress.isCompleted;
     progress.complete();
-    return this.progress.save(progress);
+    const saved = await this.progress.save(progress);
+    if (!alreadyCompleted) {
+      await this.audit.record(AUDIT_EVENTS.LESSON_COMPLETED, input.actorId ?? null, {
+        studentId: String(input.studentId),
+        lessonId: String(input.lessonId),
+        courseId: String(lesson.courseId),
+      });
+    }
+    return saved;
   }
 }
