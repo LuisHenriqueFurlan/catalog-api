@@ -11,11 +11,13 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { Roles } from '../../infrastructure/auth/decorators.js';
 import { CreateCourseUseCase } from '../../application/use-cases/courses/create-course.usecase.js';
 import { DeleteCourseUseCase } from '../../application/use-cases/courses/delete-course.usecase.js';
 import { GetCourseUseCase } from '../../application/use-cases/courses/get-course.usecase.js';
@@ -24,6 +26,7 @@ import { UpdateCourseUseCase } from '../../application/use-cases/courses/update-
 import { CreateCourseDto } from '../dtos/create-course.dto.js';
 import { ListCoursesQueryDto } from '../dtos/list-courses-query.dto.js';
 
+@ApiBearerAuth()
 @ApiTags('courses')
 @Controller('courses')
 export class CoursesController {
@@ -48,12 +51,14 @@ export class CoursesController {
     return this.getCourse.execute(id);
   }
 
+  @Roles('ADMIN')
   @Post()
   @ApiOperation({ summary: 'Cria curso' })
   create(@Body() dto: CreateCourseDto) {
     return this.createCourse.execute(dto);
   }
 
+  @Roles('ADMIN')
   @Put(':id')
   @ApiOperation({ summary: 'Atualiza curso' })
   @ApiNotFoundResponse({ description: 'Curso não encontrado' })
@@ -61,6 +66,7 @@ export class CoursesController {
     return this.updateCourse.execute(id, dto);
   }
 
+  @Roles('ADMIN')
   @Delete(':id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Remove curso (e suas matrículas)' })

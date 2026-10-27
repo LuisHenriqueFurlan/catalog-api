@@ -8,11 +8,15 @@ import {
   Post,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { CurrentUser, Roles } from '../../infrastructure/auth/decorators.js';
+import type { TokenPayload } from '../../application/ports/token-service.js';
+import { assertSelfOrAdmin } from '../ownership.js';
 import { CompleteLessonUseCase } from '../../application/use-cases/lessons/complete-lesson.usecase.js';
 import { CreateLessonUseCase } from '../../application/use-cases/lessons/create-lesson.usecase.js';
 import { GetStudentCourseProgressUseCase } from '../../application/use-cases/lessons/get-student-course-progress.usecase.js';
@@ -20,6 +24,7 @@ import { ListCourseLessonsUseCase } from '../../application/use-cases/lessons/li
 import { CompleteLessonDto } from '../dtos/complete-lesson.dto.js';
 import { CreateLessonDto } from '../dtos/create-lesson.dto.js';
 
+@ApiBearerAuth()
 @ApiTags('lessons')
 @Controller()
 export class LessonsController {
@@ -37,6 +42,7 @@ export class LessonsController {
     return this.listCourseLessons.execute(courseId);
   }
 
+  @Roles('ADMIN')
   @Post('courses/:courseId/lessons')
   @ApiOperation({ summary: 'Cria uma aula no curso' })
   @ApiNotFoundResponse({ description: 'Curso não encontrado' })
@@ -55,7 +61,9 @@ export class LessonsController {
   complete(
     @Param('lessonId', ParseIntPipe) lessonId: number,
     @Body() dto: CompleteLessonDto,
+    @CurrentUser() user: TokenPayload,
   ) {
+    assertSelfOrAdmin(user, dto.studentId);
     return this.completeLesson.execute({ studentId: dto.studentId, lessonId });
   }
 
@@ -66,7 +74,9 @@ export class LessonsController {
   progress(
     @Param('studentId', ParseIntPipe) studentId: number,
     @Param('courseId', ParseIntPipe) courseId: number,
+    @CurrentUser() user: TokenPayload,
   ) {
+    assertSelfOrAdmin(user, studentId);
     return this.getProgress.execute({ studentId, courseId });
   }
 }

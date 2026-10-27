@@ -12,6 +12,7 @@ import {
   DomainError,
   ForbiddenError,
   NotFoundError,
+  UnauthorizedError,
   ValidationError,
 } from '../../domain/errors.js';
 
@@ -71,6 +72,7 @@ function isUniqueViolation(error: unknown): boolean {
 function domainErrorStatus(error: DomainError): HttpStatus {
   if (error instanceof NotFoundError) return HttpStatus.NOT_FOUND;
   if (error instanceof ConflictError) return HttpStatus.CONFLICT;
+  if (error instanceof UnauthorizedError) return HttpStatus.UNAUTHORIZED;
   if (error instanceof ForbiddenError) return HttpStatus.FORBIDDEN;
   if (error instanceof ValidationError) return HttpStatus.BAD_REQUEST;
   return HttpStatus.INTERNAL_SERVER_ERROR;

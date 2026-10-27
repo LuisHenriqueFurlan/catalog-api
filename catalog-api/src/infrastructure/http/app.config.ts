@@ -19,6 +19,7 @@ export function configureApp(app: INestApplication) {
     .setTitle('Catálogo de Cursos')
     .setDescription('API REST de cursos, estudantes e matrículas')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
   SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, config));
 }

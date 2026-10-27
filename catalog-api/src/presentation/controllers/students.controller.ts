@@ -11,12 +11,14 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { Roles } from '../../infrastructure/auth/decorators.js';
 import { CreateStudentUseCase } from '../../application/use-cases/students/create-student.usecase.js';
 import { DeleteStudentUseCase } from '../../application/use-cases/students/delete-student.usecase.js';
 import { GetStudentUseCase } from '../../application/use-cases/students/get-student.usecase.js';
@@ -25,6 +27,8 @@ import { UpdateStudentUseCase } from '../../application/use-cases/students/updat
 import { CreateStudentDto } from '../dtos/create-student.dto.js';
 import { PaginationQueryDto } from '../dtos/pagination-query.dto.js';
 
+@ApiBearerAuth()
+@Roles('ADMIN')
 @ApiTags('students')
 @Controller('students')
 export class StudentsController {

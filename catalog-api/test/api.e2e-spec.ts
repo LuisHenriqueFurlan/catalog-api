@@ -1,13 +1,14 @@
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
-import { createTestApp } from './helpers.js';
+import { client, createTestApp, signUp } from './helpers.js';
 
 describe('API (e2e)', () => {
   let app: INestApplication;
-  const http = () => request(app.getHttpServer());
+  let token: string;
+  const http = () => client(app, token);
 
   beforeAll(async () => {
     app = await createTestApp();
+    token = (await signUp(app, 'admin@example.com', 'ADMIN')).token;
   });
 
   afterAll(async () => {
@@ -15,7 +16,7 @@ describe('API (e2e)', () => {
   });
 
   it('GET /health', async () => {
-    await http().get('/health').expect(200).expect({ status: 'ok' });
+    await client(app).get('/health').expect(200).expect({ status: 'ok' });
   });
 
   describe('courses', () => {

@@ -10,12 +10,16 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { CurrentUser, Roles } from '../../infrastructure/auth/decorators.js';
+import type { TokenPayload } from '../../application/ports/token-service.js';
+import { assertSelfOrAdmin } from '../ownership.js';
 import { CancelEnrollmentUseCase } from '../../application/use-cases/enrollments/cancel-enrollment.usecase.js';
 import { EnrollStudentUseCase } from '../../application/use-cases/enrollments/enroll-student.usecase.js';
 import { GetEnrollmentUseCase } from '../../application/use-cases/enrollments/get-enrollment.usecase.js';
@@ -24,6 +28,7 @@ import { ListStudentEnrollmentsUseCase } from '../../application/use-cases/enrol
 import { CreateEnrollmentDto } from '../dtos/create-enrollment.dto.js';
 import { PaginationQueryDto } from '../dtos/pagination-query.dto.js';
 
+@ApiBearerAuth()
 @ApiTags('enrollments')
 @Controller()
 export class EnrollmentsController {
@@ -35,12 +40,14 @@ export class EnrollmentsController {
     private readonly cancelEnrollment: CancelEnrollmentUseCase,
   ) {}
 
+  @Roles('ADMIN')
   @Get('enrollments')
   @ApiOperation({ summary: 'Lista matrículas (paginação)' })
   findAll(@Query() query: PaginationQueryDto) {
     return this.listEnrollments.execute(query);
   }
 
+  @Roles('ADMIN')
   @Get('enrollments/:id')
   @ApiOperation({ summary: 'Busca matrícula por id' })
   @ApiNotFoundResponse({ description: 'Matrícula não encontrada' })
@@ -51,7 +58,11 @@ export class EnrollmentsController {
   @Get('students/:id/enrollments')
   @ApiOperation({ summary: 'Lista as matrículas (com curso) de um estudante' })
   @ApiNotFoundResponse({ description: 'Estudante não encontrado' })
-  findByStudent(@Param('id', ParseIntPipe) id: number) {
+  findByStudent(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: TokenPayload,
+  ) {
+    assertSelfOrAdmin(user, id);
     return this.listStudentEnrollments.execute(id);
   }
 
@@ -59,10 +70,12 @@ export class EnrollmentsController {
   @ApiOperation({ summary: 'Matricula um estudante em um curso' })
   @ApiNotFoundResponse({ description: 'Estudante ou curso não encontrado' })
   @ApiConflictResponse({ description: 'Estudante já matriculado no curso' })
-  create(@Body() dto: CreateEnrollmentDto) {
+  create(@Body() dto: CreateEnrollmentDto, @CurrentUser() user: TokenPayload) {
+    assertSelfOrAdmin(user, dto.studentId);
     return this.enrollStudent.execute(dto);
   }
 
+  @Roles('ADMIN')
   @Delete('enrollments/:id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Cancela uma matrícula' })

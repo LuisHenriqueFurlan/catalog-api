@@ -51,3 +51,10 @@ export class DuplicateLessonOrderError extends ConflictError {
     super('Já existe uma aula com esta ordem no curso');
   }
 }
+export class UnauthorizedError extends DomainError {}
+
+export class InvalidCredentialsError extends UnauthorizedError {
+  constructor() {
+    super('Credenciais inválidas');
+  }
+}

@@ -110,7 +110,8 @@ Erros de validação trazem também `details` (lista de problemas por campo).
 | Status | Quando acontece                                                            |
 | ------ | -------------------------------------------------------------------------- |
 | 400    | Payload/query inválido (título < 3 caracteres, e-mail inválido, campo extra, `:id` não numérico) |
-| 403    | Estudante não matriculado no curso ao registrar/consultar progresso |
+| 401    | Token ausente/inválido/expirado; credenciais inválidas no login |
+| 403    | Role sem permissão; dados de outro estudante; estudante não matriculado ao registrar/consultar progresso |
 | 404    | Curso, estudante, aula ou matrícula inexistente (inclusive `studentId`/`courseId` no POST de matrícula) |
 | 409    | E-mail de estudante já cadastrado; estudante já matriculado no curso       |
 | 500    | Falha inesperada (detalhes só no log do servidor, nunca na resposta)       |
@@ -129,6 +130,48 @@ Os testes e2e (`test/`) sobem o app completo com `@nestjs/testing` + supertest s
 **SQLite em memória** (`DATABASE_URL=:memory:`); as migrations rodam no boot do app
 (`migrationsRun`). Novas migrations devem ser registradas em
 `src/infrastructure/persistence/migrations/index.ts`.
+
+## Autenticação e autorização (JWT + roles)
+
+Todas as rotas exigem JWT, exceto `GET /health`, `POST /api/auth/register` e `POST /api/auth/login`.
+
+1. **Registrar** (cria o usuário com role `STUDENT` e o perfil de estudante vinculado):
+
+   ```bash
+   curl -X POST http://localhost:3000/api/auth/register      -H "Content-Type: application/json"      -d '{"name":"Ana Souza","email":"ana@example.com","password":"senha-forte-123"}'
+   ```
+
+2. **Obter o token**:
+
+   ```bash
+   curl -X POST http://localhost:3000/api/auth/login      -H "Content-Type: application/json"      -d '{"email":"ana@example.com","password":"senha-forte-123"}'
+   # {"accessToken":"eyJ...","tokenType":"Bearer"}
+   ```
+
+3. **Usar o token** no header `Authorization`:
+
+   ```bash
+   curl http://localhost:3000/api/courses -H "Authorization: Bearer <token>"
+   ```
+
+No Swagger (`/docs`), clique em **Authorize** e cole o token.
+
+O primeiro **ADMIN** é criado por `npm run seed` (`ADMIN_EMAIL` / `ADMIN_PASSWORD`,
+padrão `admin@example.com` / `Admin123!` — troque em produção). Não é possível se
+registrar como ADMIN pela API.
+
+| Recurso                                   | STUDENT                  | ADMIN |
+| ----------------------------------------- | ------------------------ | ----- |
+| `GET /courses`, `GET /courses/:id`, aulas | ✅                       | ✅    |
+| `POST/PUT/DELETE /courses`, criar aulas   | ❌ 403                   | ✅    |
+| `/students` (CRUD), `/enrollments` (listar/buscar/cancelar) | ❌ 403 | ✅    |
+| Matricular, ver matrículas, concluir aula, ver progresso | só do próprio perfil | qualquer um |
+
+- Sem token / token inválido ou expirado → **401**.
+- Role incorreta ou acesso a dados de outro estudante → **403**.
+- Senhas são guardadas com hash bcrypt (nunca expostas); o login devolve a mesma
+  resposta 401 para e-mail inexistente e senha errada.
+- Variáveis: `JWT_SECRET` (obrigatória) e `JWT_EXPIRES_IN` (padrão `1h`).
 
 ## Endpoints (prefixo `/api`)
 

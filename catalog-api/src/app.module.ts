@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { migrations } from './infrastructure/persistence/migrations/index.js';
 import { ormEntities } from './infrastructure/persistence/typeorm/entities/index.js';
 import { HealthController } from './presentation/controllers/health.controller.js';
+import { AuthModule } from './presentation/modules/auth.module.js';
 import { CoursesModule } from './presentation/modules/courses.module.js';
 import { EnrollmentsModule } from './presentation/modules/enrollments.module.js';
 import { LessonsModule } from './presentation/modules/lessons.module.js';
@@ -25,6 +26,7 @@ import { StudentsModule } from './presentation/modules/students.module.js';
         synchronize: false,
       }),
     }),
+    AuthModule,
     CoursesModule,
     StudentsModule,
     LessonsModule,

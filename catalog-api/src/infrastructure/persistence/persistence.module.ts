@@ -4,12 +4,14 @@ import { ICourseRepository } from '../../domain/repositories/course.repository.j
 import { IEnrollmentRepository } from '../../domain/repositories/enrollment.repository.js';
 import { ILessonProgressRepository } from '../../domain/repositories/lesson-progress.repository.js';
 import { ILessonRepository } from '../../domain/repositories/lesson.repository.js';
+import { IUserRepository } from '../../domain/repositories/user.repository.js';
 import { IStudentRepository } from '../../domain/repositories/student.repository.js';
 import { ormEntities } from './typeorm/entities/index.js';
 import { TypeOrmCourseRepository } from './typeorm/repositories/typeorm-course.repository.js';
 import { TypeOrmEnrollmentRepository } from './typeorm/repositories/typeorm-enrollment.repository.js';
 import { TypeOrmLessonProgressRepository } from './typeorm/repositories/typeorm-lesson-progress.repository.js';
 import { TypeOrmLessonRepository } from './typeorm/repositories/typeorm-lesson.repository.js';
+import { TypeOrmUserRepository } from './typeorm/repositories/typeorm-user.repository.js';
 import { TypeOrmStudentRepository } from './typeorm/repositories/typeorm-student.repository.js';
 
 /** Liga as portas do domínio às implementações TypeORM. */
@@ -19,6 +21,7 @@ import { TypeOrmStudentRepository } from './typeorm/repositories/typeorm-student
     { provide: ICourseRepository, useClass: TypeOrmCourseRepository },
     { provide: IStudentRepository, useClass: TypeOrmStudentRepository },
     { provide: IEnrollmentRepository, useClass: TypeOrmEnrollmentRepository },
+    { provide: IUserRepository, useClass: TypeOrmUserRepository },
     { provide: ILessonRepository, useClass: TypeOrmLessonRepository },
     { provide: ILessonProgressRepository, useClass: TypeOrmLessonProgressRepository },
   ],
@@ -28,6 +31,7 @@ import { TypeOrmStudentRepository } from './typeorm/repositories/typeorm-student
     IEnrollmentRepository,
     ILessonRepository,
     ILessonProgressRepository,
+    IUserRepository,
   ],
 })
 export class PersistenceModule {}
