@@ -5,3 +5,4 @@
 **/data/*.db
 dist/
 node_modules/
+samples/lessons-large.csv

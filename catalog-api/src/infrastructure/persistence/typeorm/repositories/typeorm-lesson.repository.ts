@@ -30,6 +30,38 @@ export class TypeOrmLessonRepository implements ILessonRepository {
     return this.repo.countBy({ courseId });
   }
 
+  async findExistingOrders(lessons: Lesson[]): Promise<Set<string>> {
+    if (lessons.length === 0) return new Set();
+    const courseIds = [...new Set(lessons.map((l) => l.courseId))];
+    const orders = lessons.map((l) => l.order);
+    const rows = await this.repo
+      .createQueryBuilder('l')
+      .select(['l.courseId', 'l.order'])
+      .where('l.courseId IN (:...courseIds)', { courseIds })
+      .andWhere('l.order BETWEEN :min AND :max', {
+        min: Math.min(...orders),
+        max: Math.max(...orders),
+      })
+      .getMany();
+    return new Set(rows.map((r) => `${r.courseId}:${r.order}`));
+  }
+
+  async saveMany(lessons: Lesson[]): Promise<void> {
+    if (lessons.length === 0) return;
+    await this.repo
+      .createQueryBuilder()
+      .insert()
+      .values(
+        lessons.map((l) => ({
+          courseId: l.courseId,
+          title: l.title,
+          order: l.order,
+          contentUrl: l.contentUrl,
+        })),
+      )
+      .execute();
+  }
+
   async save(lesson: Lesson): Promise<Lesson> {
     const row = await this.repo.save(
       this.repo.create({

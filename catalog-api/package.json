@@ -26,7 +26,9 @@
     "migration:revert": "npm run typeorm -- migration:revert",
     "seed": "tsx src/infrastructure/persistence/seed.ts",
     "start:worker": "nest start --entryFile worker",
-    "start:worker:prod": "node dist/worker"
+    "start:worker:prod": "node dist/worker",
+    "import:lessons": "node dist/cli/import-lessons.js",
+    "import:generate": "node scripts/generate-lessons-csv.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -42,6 +44,7 @@
     "better-sqlite3": "^12.11.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "csv-parse": "^7.0.3",
     "dotenv": "^18.0.9",
     "mongoose": "^9.11.4",
     "reflect-metadata": "^0.2.2",

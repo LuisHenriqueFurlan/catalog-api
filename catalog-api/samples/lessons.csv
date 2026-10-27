@@ -1,0 +1,21 @@
+courseId,title,order,contentUrl
+1,Apresentação do curso,1,https://cdn.example.com/node/01-apresentacao.mp4
+1,Instalando o Node.js,2,https://cdn.example.com/node/02-instalacao.mp4
+1,Módulos e npm,3,https://cdn.example.com/node/03-modulos.mp4
+1,Streams na prática,4,https://cdn.example.com/node/04-streams.mp4
+1,Eventos e EventEmitter,5,https://cdn.example.com/node/05-eventos.mp4
+2,Introdução ao NestJS,1,https://cdn.example.com/nest/01-intro.mp4
+2,Módulos e providers,2,https://cdn.example.com/nest/02-modulos.mp4
+2,Controllers e rotas,3,https://cdn.example.com/nest/03-controllers.mp4
+2,Pipes e validação,4,https://cdn.example.com/nest/04-pipes.mp4
+2,Guards e autenticação,5,https://cdn.example.com/nest/05-guards.mp4
+3,Modelagem relacional,1,https://cdn.example.com/sql/01-modelagem.mp4
+3,SELECT e filtros,2,https://cdn.example.com/sql/02-select.mp4
+3,JOINs,3,https://cdn.example.com/sql/03-joins.mp4
+3,Índices e performance,4,https://cdn.example.com/sql/04-indices.mp4
+3,Transações,5,https://cdn.example.com/sql/05-transacoes.mp4
+1,Apresentação repetida,1,https://cdn.example.com/node/duplicada.mp4
+1,ab,6,https://cdn.example.com/node/titulo-curto.mp4
+2,Ordem inválida,0,https://cdn.example.com/nest/ordem-zero.mp4
+3,URL inválida,6,ftp://servidor/arquivo
+99,Curso inexistente,1,https://cdn.example.com/x/01.mp4

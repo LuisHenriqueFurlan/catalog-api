@@ -6,4 +6,6 @@ export abstract class ILessonRepository {
   abstract findByCourseAndOrder(courseId: number, order: number): Promise<Lesson | null>;
   abstract countByCourse(courseId: number): Promise<number>;
   abstract save(lesson: Lesson): Promise<Lesson>;
+  abstract findExistingOrders(lessons: Lesson[]): Promise<Set<string>>;
+  abstract saveMany(lessons: Lesson[]): Promise<void>;
 }

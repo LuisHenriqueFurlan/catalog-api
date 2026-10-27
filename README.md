@@ -161,6 +161,38 @@ Resiliência:
 - Se o RabbitMQ estiver fora ao publicar, o erro é logado e a requisição continua (best-effort);
   um *outbox* transacional seria o próximo passo para garantia total.
 
+## Importação em massa (streams)
+
+Importa aulas (`Lesson`) de um CSV sem carregar o arquivo na memória:
+`fs.createReadStream` → `csv-parse` (stream) → lotes de 500 linhas → validação no domínio →
+`INSERT` em lote.
+
+```bash
+cd catalog-api
+npm run build
+npm run import:lessons -- samples/lessons.csv
+```
+
+Formato (cabeçalho obrigatório): `courseId,title,order,contentUrl`. O exemplo
+[`samples/lessons.csv`](catalog-api/samples/lessons.csv) traz 15 linhas válidas e 5 casos de erro
+(duplicada, título curto, ordem inválida, URL inválida, curso inexistente). Saída:
+
+```
+20 registros processados (15 importados, 1 duplicados, 4 inválidos)
+Concluído em 0.0s: 20 lidos, 15 importados, 1 duplicados, 4 inválidos
+```
+
+- **Streaming e lotes:** o `readCsvInBatches` é um gerador assíncrono; o use case
+  (`ImportLessonsUseCase`) consome um lote por vez, então a memória não cresce com o arquivo.
+- **Event loop:** cada lote devolve o controle com `setImmediate`, e o parser respeita
+  *backpressure* (só lê o próximo trecho quando o lote anterior termina).
+- **Progresso:** um log `x registros processados` por lote; linhas rejeitadas são logadas com
+  o número da linha (até 20 avisos) e contadas no resumo.
+- **Idempotente:** pares `(courseId, order)` já existentes são ignorados; rodar de novo não duplica.
+- **Teste de volume:** `npm run import:generate -- samples/lessons-large.csv 300000 3` gera
+  300 mil linhas (~19 MB). Importadas com `node --max-old-space-size=64 dist/cli/import-lessons.js ...`
+  (heap de 64 MB), levaram ~17 s; a segunda execução reportou 300 mil duplicados e 0 inseridos.
+
 ## Erros
 
 Todo erro tem o mesmo formato (`AllExceptionsFilter`):

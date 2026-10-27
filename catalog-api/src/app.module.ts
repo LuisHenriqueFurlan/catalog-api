@@ -3,8 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuditModule } from './infrastructure/audit/audit.module.js';
 import { MessagingModule } from './infrastructure/messaging/messaging.module.js';
-import { migrations } from './infrastructure/persistence/migrations/index.js';
-import { ormEntities } from './infrastructure/persistence/typeorm/entities/index.js';
+import { typeOrmOptions } from './infrastructure/persistence/typeorm.config.js';
 import { HealthController } from './presentation/controllers/health.controller.js';
 import { AuditLogsModule } from './presentation/modules/audit.module.js';
 import { AuthModule } from './presentation/modules/auth.module.js';
@@ -19,16 +18,7 @@ import { StudentsModule } from './presentation/modules/students.module.js';
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'better-sqlite3',
-        database: config
-          .get<string>('DATABASE_URL', 'file:./data/catalog.db')
-          .replace(/^file:/, ''),
-        entities: ormEntities,
-        migrations,
-        migrationsRun: true,
-        synchronize: false,
-      }),
+      useFactory: typeOrmOptions,
     }),
     AuditModule,
     MessagingModule,
