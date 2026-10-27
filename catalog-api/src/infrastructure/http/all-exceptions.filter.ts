@@ -53,6 +53,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message,
       ...(details !== undefined && { details }),
       path: request.originalUrl,
+      requestId: (request as Request & { id?: string }).id,
       timestamp: new Date().toISOString(),
     });
   }

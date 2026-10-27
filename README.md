@@ -223,6 +223,44 @@ vindas de ferramentas do CLI do Nest, que não vão para a imagem final:
 A correção exige `npm audit fix --force` (muda versões maiores do CLI), então foi deixada para
 uma atualização dedicada das ferramentas.
 
+## Observabilidade
+
+**Logs estruturados (JSON, `pino`)** — um por requisição, com contexto para depuração:
+
+```json
+{"level":40,"time":1793117228784,"req":{"id":"demo-1","method":"GET","url":"/api/courses/999"},
+ "endpoint":"/api/courses/:id","userId":1,"role":"ADMIN","res":{"statusCode":404},
+ "responseTime":2,"msg":"request completed"}
+```
+
+- **`requestId`**: usa o header `x-request-id` enviado (até 100 caracteres) ou gera um UUID. Ele volta
+  no header `x-request-id` da resposta, aparece em `req.id` nos logs (inclusive nos logs emitidos
+  dentro da requisição) e no campo `requestId` do corpo de erro. Para investigar um erro: pegue o
+  `requestId` da resposta e filtre os logs, por exemplo `node dist/main | jq 'select(.req.id=="<id>")'`.
+- **Contexto:** rota (`endpoint`), `userId` e `role` do usuário autenticado, status e tempo de resposta.
+  O header `Authorization` é mascarado (`redact`); `/health` e `/metrics` não geram log.
+- **Nível:** `LOG_LEVEL` (`info` por padrão; `debug`, `warn`, `error`, `silent`). Respostas 4xx
+  saem como `warn` (nível 40) e 5xx como `error` (50). O worker usa o mesmo formato.
+
+**`GET /health`** (público) verifica cada dependência (timeout de 2 s):
+
+```json
+{"status":"ok","timestamp":"...","uptimeSeconds":9,"components":{
+  "database":{"status":"up","latencyMs":1},
+  "mongo":{"status":"up","latencyMs":4},
+  "broker":{"status":"up","latencyMs":0}}}
+```
+
+| `status` | Quando | HTTP |
+| -------- | ------ | ---- |
+| `ok` | Banco relacional, Mongo e broker respondem (broker `disabled` sem `RABBITMQ_URL` não conta como falha) | 200 |
+| `degraded` | Mongo ou RabbitMQ fora: a API segue atendendo, mas auditoria/eventos ficam comprometidos | 200 |
+| `down` | Banco relacional fora | 503 |
+
+**`GET /metrics`** (formato Prometheus, sem prefixo `/api`): métricas do processo (CPU, memória,
+event loop) mais `http_requests_total{method,route,status}` e `http_request_duration_seconds`.
+Ele é público para facilitar o scraping; em produção restrinja por rede/proxy.
+
 ## Erros
 
 Todo erro tem o mesmo formato (`AllExceptionsFilter`):
@@ -244,6 +282,7 @@ Erros de validação trazem também `details` (lista de problemas por campo).
 | 403    | Role sem permissão; dados de outro estudante; estudante não matriculado ao registrar/consultar progresso |
 | 404    | Curso, estudante, aula ou matrícula inexistente (inclusive `studentId`/`courseId` no POST de matrícula) |
 | 409    | E-mail de estudante já cadastrado; estudante já matriculado no curso       |
+| 503    | `GET /health` com o banco relacional fora do ar |
 | 500    | Falha inesperada (detalhes só no log do servidor, nunca na resposta)       |
 
 A unicidade também é garantida pelo banco (`UNIQUE`); uma violação que escape

@@ -4,3 +4,4 @@ process.env.JWT_SECRET = 'segredo-de-teste';
 process.env.THROTTLE_LIMIT ??= '100000';
 process.env.THROTTLE_AUTH_LIMIT ??= '100000';
 delete process.env.RABBITMQ_URL;
+process.env.LOG_LEVEL = 'silent';

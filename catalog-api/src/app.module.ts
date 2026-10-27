@@ -1,12 +1,16 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { validateEnv } from './infrastructure/config/env.validation.js';
+import { loggerParams } from './infrastructure/observability/logging.config.js';
+import { ObservabilityModule } from './infrastructure/observability/observability.module.js';
 import { AuditModule } from './infrastructure/audit/audit.module.js';
 import { MessagingModule } from './infrastructure/messaging/messaging.module.js';
 import { typeOrmOptions } from './infrastructure/persistence/typeorm.config.js';
+import { MetricsController } from './presentation/controllers/metrics.controller.js';
 import { HealthController } from './presentation/controllers/health.controller.js';
 import { AuditLogsModule } from './presentation/modules/audit.module.js';
 import { AuthModule } from './presentation/modules/auth.module.js';
@@ -23,6 +27,7 @@ import { StudentsModule } from './presentation/modules/students.module.js';
       validate: validateEnv,
       ignoreEnvFile: process.env.NODE_ENV === 'test',
     }),
+    LoggerModule.forRootAsync({ inject: [ConfigService], useFactory: loggerParams }),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => [
@@ -42,6 +47,7 @@ import { StudentsModule } from './presentation/modules/students.module.js';
     }),
     AuditModule,
     MessagingModule,
+    ObservabilityModule,
     AuditLogsModule,
     AuthModule,
     CoursesModule,
@@ -50,7 +56,7 @@ import { StudentsModule } from './presentation/modules/students.module.js';
     ReportsModule,
     EnrollmentsModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, MetricsController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

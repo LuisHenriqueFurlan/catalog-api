@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import amqp, { type ChannelModel, type ConfirmChannel } from 'amqplib';
+import { BrokerState, IBrokerStatus } from './broker-status.js';
 import { DomainEventMessage, IEventPublisher } from '../../application/ports/event-publisher.js';
 import { EVENTS_EXCHANGE, EventEnvelope } from './messaging.constants.js';
 import { assertTopology } from './rabbitmq-topology.js';
 
 @Injectable()
-export class RabbitMqEventPublisher implements IEventPublisher, OnModuleInit, OnModuleDestroy {
+export class RabbitMqEventPublisher implements IEventPublisher, IBrokerStatus, OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RabbitMqEventPublisher.name);
   private connection?: ChannelModel;
   private channel?: ConfirmChannel;
@@ -48,8 +49,13 @@ export class RabbitMqEventPublisher implements IEventPublisher, OnModuleInit, On
     }
   }
 
-  isHealthy(): boolean {
-    return !!this.channel && !this.closing;
+  async check(): Promise<BrokerState> {
+    try {
+      await this.ensureChannel();
+      return 'up';
+    } catch {
+      return 'down';
+    }
   }
 
   private ensureChannel(): Promise<ConfirmChannel> {

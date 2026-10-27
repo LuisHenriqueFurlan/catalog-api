@@ -16,7 +16,13 @@ describe('API (e2e)', () => {
   });
 
   it('GET /health', async () => {
-    await client(app).get('/health').expect(200).expect({ status: 'ok' });
+    const res = await client(app).get('/health').expect(200);
+    expect(res.body.status).toBe('ok');
+    expect(res.body.components).toMatchObject({
+      database: { status: 'up' },
+      mongo: { status: 'up' },
+      broker: { status: 'disabled' },
+    });
   });
 
   describe('courses', () => {

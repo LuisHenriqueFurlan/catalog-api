@@ -2,6 +2,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
+import { MetricsService } from '../observability/metrics.service.js';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './all-exceptions.filter.js';
 
@@ -16,7 +17,16 @@ export function configureApp(app: INestApplication) {
   app.enableCors(
     origins ? { origin: origins.split(',').map((o) => o.trim()), credentials: true } : undefined,
   );
-  app.setGlobalPrefix('api', { exclude: ['health'] });
+  const metrics = app.get(MetricsService);
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const started = process.hrtime.bigint();
+    res.on('finish', () => {
+      const seconds = Number(process.hrtime.bigint() - started) / 1e9;
+      metrics.observe(req.method, req.route?.path ?? 'unmatched', res.statusCode, seconds);
+    });
+    next();
+  });
+  app.setGlobalPrefix('api', { exclude: ['health', 'metrics'] });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
